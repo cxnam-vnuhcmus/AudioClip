@@ -7,8 +7,8 @@
   "Setup": {
     "name": "Multimodal-Audio",
     "suffix": "CV2",
-    "batch_train": 2,
-    "batch_test": 2,
+    "batch_train": 1,
+    "batch_test": 1,
     "workers_train": 0,
     "workers_test": 0,
     "epochs": 50,
@@ -18,7 +18,7 @@
   "Model": {
     "class": "model.audioclip.AudioCLIP",
     "args": {
-      "multilabel": false,
+      "multilabel": true,
       "pretrained": false
     }
   },
@@ -41,9 +41,9 @@
     "class": "utils.datasets.MEAD",
     "args": {
       "audio_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/audios",
-      "visual_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/images",
+      "visual_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/face_meshes_mask",
       "lm_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/face_meshes",
-      "num_frames": 5,
+      "num_frames": 15,
       "fps": 25,
       "sample_rate": 22050,
       "n_mels": 80,
@@ -103,7 +103,7 @@
       "lines": [
         {
           "line_label": "Val. Acc.",
-          "class": "ignite.metrics.Accuracy",
+          "class": "ignite.metrics.CosineSimilarity",
           "args": {},
           "is_checkpoint": true
         }

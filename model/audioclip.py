@@ -274,26 +274,17 @@ class AudioCLIP(CLIP):
         with torch.no_grad():
             audio, image, text, lm = batch
 
-            ((audio_features, _, _), _), _ = model(
+            ((audio_features, image_features, _), (logits_audio_image, _, _)), _ = model(
                 audio=audio,
+                image=image,
                 batch_indices=torch.arange(audio.shape[0], dtype=torch.int64, device=device)
             )
-            audio_features = audio_features.unsqueeze(1)
-
-            ((_, image_features, _), _), _ = model(
-                image=image,
-                batch_indices=torch.arange(image.shape[0], dtype=torch.int64, device=device)
-            )
-            image_features = image_features.unsqueeze(1)
-
-            logit_scale_at = torch.clamp(model.module.logit_scale_at.exp(), min=1.0, max=100.0)
-            y_pred = (logit_scale_at * audio_features @ image_features.transpose(-1, -2)).squeeze(1)
-
-            y = torch.zeros(
-                audio.shape[0], image_features.shape[0], dtype=torch.int8, device=device
-            )
             
-            y_pred = torch.softmax(y_pred, dim=-1)
-            y = y.argmax(dim=-1)
-
+            logit_scale_at = torch.clamp(model.module.logit_scale_at.exp(), min=1.0, max=100.0)
+            y_pred = logits_audio_image
+            y_pred = torch.sigmoid(y_pred / logit_scale_at - 0.5)
+            
+            y = torch.eye(
+                audio.shape[0], dtype=torch.int8, device=device
+            )
         return y_pred, y

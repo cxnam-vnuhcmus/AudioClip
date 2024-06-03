@@ -98,7 +98,7 @@ class MEAD(td.Dataset):
                 return None
             try:
                 img = cv2.resize(img, (self.img_size, self.img_size))
-                img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+                # img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             except Exception as e:
                 return None
             window.append(img)
@@ -119,13 +119,13 @@ class MEAD(td.Dataset):
     def prepare_window(self, window):
         # T x 3 x H x W
         x = np.asarray(window) / 255.
-        # x = np.transpose(x, (0, 3, 1, 2))
+        x = np.transpose(x, (0, 3, 1, 2))
 
         return x
 
     def __len__(self):
-        # return len(self.all_datas)
-        return 2
+        return len(self.all_datas)
+        # return 2
 
     def __getitem__(self, idx):
         while 1:
@@ -178,18 +178,20 @@ class MEAD(td.Dataset):
             # if mel.shape[0] != self.num_frames:
             #     continue
             
-            # audio_seg = [audio[i*hop_length:(i+1)*hop_length] for i in range(frame_id - self.num_frames//2,frame_id + self.num_frames//2+1)]
-            audio_seg = audio[(frame_id - self.num_frames//2) * hop_length:(frame_id + self.num_frames//2+1)*hop_length]
+            audio_seg = [audio[i*hop_length:(i+1)*hop_length] for i in range(frame_id - self.num_frames//2,frame_id + self.num_frames//2+1)]
+            # audio_seg = audio[(frame_id - self.num_frames//2) * hop_length:(frame_id + self.num_frames//2+1)*hop_length]
             audio_seg = np.asarray(audio_seg)
             audio_seg = torch.FloatTensor(audio_seg) # [5, 882] = [4410]
-            if audio_seg.shape[0] // hop_length  != self.num_frames:
+            if audio_seg.shape[0]  != self.num_frames:
                 continue
+            # if audio_seg.shape[0] // hop_length  != self.num_frames:
+            #     continue
 
             
             #Emotion
             emo_text = folder_name.split('/')[0].split('_')[1]
 
-            return audio_seg, img_window, [emo_text], lm_window
+            return audio_seg, img_window, None, lm_window
 
     def collate_fn(self, batch):
         batch_audio, batch_image, batch_text, batch_lm = zip(*batch)
@@ -198,12 +200,14 @@ class MEAD(td.Dataset):
         if not all(audio is None for audio in batch_audio):
             batch_audio = [batch_audio[idx] for idx in keep_ids]
             batch_audio = torch.stack(batch_audio)
+            batch_audio = batch_audio[0]
         else:
             batch_audio = None
 
         if not all(image is None for image in batch_image):
             batch_image = [batch_image[idx] for idx in keep_ids]
             batch_image = torch.stack(batch_image)
+            batch_image = batch_image[0]
         else:
             batch_image = None
 

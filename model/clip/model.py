@@ -105,7 +105,7 @@ class ModifiedResNet(nn.Module):
         self.input_resolution = input_resolution
 
         # the 3-layer stem
-        self.conv1 = nn.Conv2d(5, width // 2, kernel_size=3, stride=2, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(3, width // 2, kernel_size=3, stride=2, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(width // 2)
         self.conv2 = nn.Conv2d(width // 2, width // 2, kernel_size=3, padding=1, bias=False)
         self.bn2 = nn.BatchNorm2d(width // 2)
