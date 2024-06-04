@@ -258,7 +258,7 @@ class AudioCLIP(CLIP):
         return 'Cross Entropy'
         
     def training_step_imp(model, batch, device) -> torch.Tensor:
-        audio, image, text, lm = batch
+        audio, image, text = batch
         
         if audio is not None:
             audio = audio.to(device)
@@ -272,7 +272,7 @@ class AudioCLIP(CLIP):
 
     def eval_step_imp(model, batch, device, eval_loader) -> Tuple[torch.Tensor, torch.Tensor]:
         with torch.no_grad():
-            audio, image, text, lm = batch
+            audio, image, text = batch
 
             ((audio_features, image_features, _), (logits_audio_image, _, _)), _ = model(
                 audio=audio,

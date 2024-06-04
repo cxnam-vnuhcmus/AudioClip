@@ -40,9 +40,9 @@
   "Dataset": {
     "class": "utils.datasets.MEAD",
     "args": {
-      "audio_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/audios",
+      "audio_dataroot": "/media02/cxnam/datasets/MEAD/M003/Features/audios",
       "visual_dataroot": "",
-      "lm_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/face_meshes",
+      "lm_dataroot": "/media02/cxnam/datasets/MEAD/M003/Features/face_meshes",
       "num_frames": 15,
       "fps": 25,
       "sample_rate": 22050,
