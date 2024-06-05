@@ -280,11 +280,11 @@ class AudioCLIP(CLIP):
                 batch_indices=torch.arange(audio.shape[0], dtype=torch.int64, device=device)
             )
             
-            logit_scale_at = torch.clamp(model.module.logit_scale_at.exp(), min=1.0, max=100.0)
-            y_pred = logits_audio_image
-            y_pred = torch.sigmoid(y_pred / logit_scale_at - 0.5)
+            # logit_scale_at = torch.clamp(model.module.logit_scale_at.exp(), min=1.0, max=100.0)
+            # y_pred = logits_audio_image
+            # y_pred = torch.sigmoid(y_pred / logit_scale_at - 0.5)
             
-            y = torch.eye(
-                audio.shape[0], dtype=torch.int8, device=device
-            )
-        return y_pred, y
+            # y = torch.eye(
+            #     audio.shape[0], dtype=torch.int8, device=device
+            # )
+        return audio_features, image_features

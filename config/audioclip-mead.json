@@ -98,12 +98,12 @@
     "Performance": {
       "window_name": null,
       "x_label": "#Epochs",
-      "y_label": "Accuracy",
+      "y_label": "Cosine Similarity",
       "width": 1890,
       "height": 416,
       "lines": [
         {
-          "line_label": "Val. Acc.",
+          "line_label": "Val. CSim.",
           "class": "ignite.metrics.CosineSimilarity",
           "args": {},
           "is_checkpoint": true
