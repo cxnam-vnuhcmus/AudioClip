@@ -15,8 +15,6 @@ from PIL import Image
 import torchvision.transforms as T
 from diffusers import AutoencoderKL
 
-vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-ema")
-
 FACEMESH_LIPS = frozenset([(61, 146), (146, 91), (91, 181), (181, 84), (84, 17),
                            (17, 314), (314, 405), (405, 321), (321, 375),
                            (375, 291), (61, 185), (185, 40), (40, 39), (39, 37),
@@ -98,6 +96,9 @@ class Dataset(td.Dataset):
             T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])   
         
+        self.vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-ema")
+        self.vae = self.vae.to(self.device)
+        
         filelists = []
         with open(self.datalist_root, 'r') as file:
             for line in file:
@@ -127,6 +128,11 @@ class Dataset(td.Dataset):
             self.all_datas = filelists[:int(len(filelists) * 0.8)]
         else:
             self.all_datas = filelists[int(len(filelists) * 0.8):]
+    
+    @property
+    def device(self):
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        return device
         
     def __len__(self):
         return len(self.all_datas)
@@ -148,30 +154,33 @@ class Dataset(td.Dataset):
         for i in FACEMESH_LIPS_IDX:
             lm_lip.append(lm_data[i])
         lm_lip = np.asarray(lm_lip)
-        lm_lip = torch.FloatTensor(lm_lip)
+        lm_lip = torch.FloatTensor(lm_lip).to(self.device)
         
-        image = Image.open(img_path).convert('RGB')                 #[3,256,256]
-        mask_image = T.ToTensor()(image.copy())        
-        image = self.transform(image)  
+        gt_image = Image.open(img_path).convert('RGB')                 #[3,256,256]
+        image = self.transform(gt_image)  
+        image = image.to(self.device)
         image = image.unsqueeze(0)                                  #[1,3,256,256]
-        image_embedding = vae.encode(image).latent_dist.sample()    #[1,4,32,32]
+        image_embedding = self.vae.encode(image).latent_dist.sample()    #[1,4,32,32]
 
-        mask = torch.ones_like(mask_image)  # (3,256,256)
+        mask_image = T.ToTensor()(gt_image.copy())        
+        mask_image = mask_image.to(self.device)
+        mask = torch.ones_like(mask_image).to(self.device)  # (3,256,256)
         mask[:, mask_image.shape[1]//2: , :] = 0        
         mask_image = mask_image * mask
         mask_image = T.ToPILImage()(mask_image)
         mask_image = self.transform(mask_image)  
         mask_image = mask_image.unsqueeze(0)
-        mask_image_embedding = vae.encode(mask_image).latent_dist.sample()
+        mask_image_embedding = self.vae.encode(mask_image).latent_dist.sample()
         del mask_image
         
         ref_image = Image.open(ref_img_path).convert('RGB')
+        ref_image = ref_image.to(self.device)
         ref_image = self.transform(ref_image)  
         ref_image = ref_image.unsqueeze(0)
-        ref_image_embedding = vae.encode(ref_image).latent_dist.sample()
+        ref_image_embedding = self.vae.encode(ref_image).latent_dist.sample()
         del ref_image
         
-        return phoneme, lm_lip, mask_image_embedding, ref_image_embedding, image_embedding, image
+        return phoneme, lm_lip, mask_image_embedding, ref_image_embedding, image_embedding, gt_image
 
     def collate_fn(self, batch):
         batch_phoneme, batch_lm, batch_mask_image_embedding, batch_ref_image_embedding, batch_image_embedding, batch_img = zip(*batch)

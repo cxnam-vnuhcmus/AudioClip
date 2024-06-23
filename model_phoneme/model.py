@@ -102,7 +102,7 @@ class Model(nn.Module):
 
         loss = self.loss_fn(logits_phoneme_landmark, pred_features, visual_features)
 
-        return (pred_features, visual_features), loss
+        return (pred_features, visual_features, visual), loss
 
     def loss_fn(self, logits_phoneme_landmark, pred_features, gt_features):
         batch_size = logits_phoneme_landmark.shape[0]
@@ -156,7 +156,7 @@ class Model(nn.Module):
         with torch.no_grad():
             phoneme, landmark, mask, ref, visual_feat, visual = batch
 
-            (pred_features, visual_features), _ = model(
+            (pred_features, visual_features, visual), _ = model(
                 phoneme = phoneme, 
                 landmark = landmark,
                 mask_features = mask,
