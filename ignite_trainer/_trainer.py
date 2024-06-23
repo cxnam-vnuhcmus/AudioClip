@@ -125,21 +125,20 @@ def run(experiment_name: str,
         model = torch.nn.DataParallel(model, device_ids=range(num_gpus))
         model = model.to(device)
 
-        # disable all parameters
         for p in model.parameters():
-            p.requires_grad = False
-
-        # enable only audio-related parameters
-        for p in model.module.audio.parameters():
             p.requires_grad = True
 
-        # disable fbsp-parameters
-        for p in model.module.audio.fbsp.parameters():
-            p.requires_grad = False
+        # # enable only audio-related parameters
+        # for p in model.module.audio.parameters():
+        #     p.requires_grad = True
+
+        # # disable fbsp-parameters
+        # for p in model.module.audio.fbsp.parameters():
+        #     p.requires_grad = False
 
         # disable logit scaling
-        model.module.logit_scale_ai.requires_grad = False
-        model.module.logit_scale_at.requires_grad = False
+        # model.module.logit_scale_ai.requires_grad = False
+        # model.module.logit_scale_at.requires_grad = False
 
         # add only enabled parameters to optimizer's list
         param_groups = [
@@ -147,23 +146,23 @@ def run(experiment_name: str,
         ]
 
         # enable fbsp-parameters
-        for p in model.module.audio.fbsp.parameters():
-            p.requires_grad = True
+        # for p in model.module.audio.fbsp.parameters():
+        #     p.requires_grad = True
 
         # enable logit scaling
-        model.module.logit_scale_ai.requires_grad = True
-        model.module.logit_scale_at.requires_grad = True
+        # model.module.logit_scale_ai.requires_grad = True
+        # model.module.logit_scale_at.requires_grad = True
 
         # add fbsp- and logit scaling parameters to a separate group without weight decay
-        param_groups.append({
-            'params': [
-                p for p in model.module.audio.fbsp.parameters()
-            ] + [
-                model.module.logit_scale_ai,
-                model.module.logit_scale_at
-            ],
-            'weight_decay': 0.0
-        })
+        # param_groups.append({
+        #     'params': [
+        #         p for p in model.module.audio.fbsp.parameters()
+        #     ] + [
+        #         model.module.logit_scale_ai,
+        #         model.module.logit_scale_at
+        #     ],
+        #     'weight_decay': 0.0
+        # })
 
         Optimizer: Type = _utils.load_class(optimizer_class)
         optimizer: torch.optim.Optimizer = Optimizer(
@@ -502,9 +501,10 @@ def run(experiment_name: str,
 
         trainer.run(train_loader, max_epochs=epochs)
 
-        if vis_pid is not None:
-            tqdm.tqdm.write('Stopping visdom')
-            os.kill(vis_pid, signal.SIGTERM)
+        if use_visdom:
+            if vis_pid is not None:
+                tqdm.tqdm.write('Stopping visdom')
+                os.kill(vis_pid, signal.SIGTERM)
 
         if use_visdom:
             del vis

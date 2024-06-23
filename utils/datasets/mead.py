@@ -277,7 +277,7 @@ class MEAD(td.Dataset):
 
             
             #Emotion
-            emo_text = folder_name.split('/')[0].split('_')[1]
+            # emo_text = [folder_name.split('/')[0].split('_')[1]] * self.num_frames
 
             return audio_seg, img_window, None, lm_window
 

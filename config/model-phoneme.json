@@ -5,20 +5,19 @@
     "env_path": "./assets"
   },
   "Setup": {
-    "name": "Multimodal-Audio",
-    "suffix": "CV3",
-    "batch_train": 1,
-    "batch_test": 1,
+    "name": "ModelPhoneme",
+    "suffix": "CV1",
+    "batch_train": 2,
+    "batch_test": 2,
     "workers_train": 0,
     "workers_test": 0,
     "epochs": 50,
-    "log_interval": 10,
+    "log_interval": 50,
     "saved_models_path": "./assets"
   },
   "Model": {
-    "class": "model.audioclip.AudioCLIP",
+    "class": "model_phoneme.model.Model",
     "args": {
-      "multilabel": false,
       "pretrained": false
     }
   },
@@ -38,18 +37,18 @@
     }
   },
   "Dataset": {
-    "class": "utils.datasets.MEAD",
+    "class": "model_phoneme.dataset.Dataset",
     "args": {
-      "audio_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/audios",
-      "visual_dataroot": "",
+      "datalist_root": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/data.txt",
+      "audio_dataroot": "",
+      "visual_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/images",
       "lm_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/face_meshes",
-      "num_frames": 15,
+      "transcript_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/transcripts",
       "fps": 25,
       "sample_rate": 22050,
       "n_mels": 80,
       "n_fft": 800,
-      "img_size": 128,
-      "lm_scale": 256,
+      "img_size": 224,
       "training": {"key": "train", "yes": true, "no": false}
     }
   },

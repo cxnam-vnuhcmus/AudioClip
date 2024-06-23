@@ -5,8 +5,8 @@
     "env_path": "./assets"
   },
   "Setup": {
-    "name": "Multimodal-Audio",
-    "suffix": "CV3",
+    "name": "ModelPhoneme",
+    "suffix": "CV1",
     "batch_train": 1,
     "batch_test": 1,
     "workers_train": 0,
@@ -16,7 +16,7 @@
     "saved_models_path": "./assets"
   },
   "Model": {
-    "class": "model.audioclip.AudioCLIP",
+    "class": "model_landmark_mask.model.Model",
     "args": {
       "multilabel": false,
       "pretrained": false
