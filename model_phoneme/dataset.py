@@ -9,8 +9,6 @@ import numpy as np
 import random
 import cv2
 import librosa
-import mediapipe as mp
-mp_drawing = mp.solutions.drawing_utils
 from PIL import Image
 import torchvision.transforms as T
 from diffusers import AutoencoderKL
@@ -157,29 +155,30 @@ class Dataset(td.Dataset):
         lm_lip = torch.FloatTensor(lm_lip).to(self.device)
         
         gt_image = Image.open(img_path).convert('RGB')                 #[3,256,256]
-        image = self.transform(gt_image)  
+        image = self.transform(gt_image.copy())  
         image = image.to(self.device)
         image = image.unsqueeze(0)                                  #[1,3,256,256]
         image_embedding = self.vae.encode(image).latent_dist.sample()    #[1,4,32,32]
 
         mask_image = T.ToTensor()(gt_image.copy())        
-        mask_image = mask_image.to(self.device)
-        mask = torch.ones_like(mask_image).to(self.device)  # (3,256,256)
+        mask = torch.ones_like(mask_image)  # (3,256,256)
         mask[:, mask_image.shape[1]//2: , :] = 0        
         mask_image = mask_image * mask
         mask_image = T.ToPILImage()(mask_image)
         mask_image = self.transform(mask_image)  
+        mask_image = mask_image.to(self.device)
         mask_image = mask_image.unsqueeze(0)
         mask_image_embedding = self.vae.encode(mask_image).latent_dist.sample()
         del mask_image
         
         ref_image = Image.open(ref_img_path).convert('RGB')
-        ref_image = ref_image.to(self.device)
         ref_image = self.transform(ref_image)  
+        ref_image = ref_image.to(self.device)
         ref_image = ref_image.unsqueeze(0)
         ref_image_embedding = self.vae.encode(ref_image).latent_dist.sample()
         del ref_image
         
+        gt_image = T.ToTensor()(gt_image).to(self.device)
         return phoneme, lm_lip, mask_image_embedding, ref_image_embedding, image_embedding, gt_image
 
     def collate_fn(self, batch):

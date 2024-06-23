@@ -108,7 +108,7 @@ def get_data_loaders(Dataset: Type,
         batch_size=batch_train,
         shuffle=dl_shuffle,
         num_workers=workers_train,
-        pin_memory=True,
+        pin_memory=False,
         collate_fn=ds_train.collate_fn,
         drop_last=True
     )
@@ -121,7 +121,7 @@ def get_data_loaders(Dataset: Type,
         ds_eval,
         batch_size=batch_test,
         num_workers=workers_test,
-        pin_memory=True,
+        pin_memory=False,
         collate_fn=ds_eval.collate_fn
     )
 
