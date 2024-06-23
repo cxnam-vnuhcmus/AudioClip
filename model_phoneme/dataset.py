@@ -114,8 +114,8 @@ class Dataset(td.Dataset):
                             frame_range = [frame_mid, frame_mid + 1, frame_mid - 1, frame_mid + 2, frame_mid - 2]
                             for frame_id in frame_range:
                                 lm_path = os.path.join(self.lm_dataroot, line, f'{frame_id:05d}.json')
-                                if os.path.exists(lm_path):
-                                    img_path = os.path.join(self.visual_dataroot, line, f'{frame_id:05d}.jpg')
+                                img_path = os.path.join(self.visual_dataroot, line, f'{frame_id:05d}.jpg')
+                                if os.path.exists(lm_path) and os.path.exists(img_path):
                                     filelists.append((phoneme['phoneme'],lm_path, img_path))
                                     break
         
