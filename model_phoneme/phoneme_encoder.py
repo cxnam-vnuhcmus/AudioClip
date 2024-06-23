@@ -13,8 +13,8 @@ class PhonemeEncoder(nn.Module):
         super().__init__()
         self.g2p = G2p()
         self.fc = nn.Linear(256, dim_out)
- 
-    def forward(self, phonemes: torch.Tensor):
+        
+    def tokenizer(self, phonemes):
         with torch.no_grad():
             tokens = []
             for phoneme in phonemes:
@@ -26,5 +26,8 @@ class PhonemeEncoder(nn.Module):
                 tokens.append(last_hidden)
             tokens = [torch.tensor(arr) for arr in tokens]
             tokens = torch.cat(tokens, axis=0)
+        return tokens
+ 
+    def forward(self, tokens):
         tokens = self.fc(tokens)
         return tokens

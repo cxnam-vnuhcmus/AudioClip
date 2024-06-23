@@ -150,34 +150,26 @@ class Dataset(td.Dataset):
         lm_lip = np.asarray(lm_lip)
         lm_lip = torch.FloatTensor(lm_lip)
         
-        image = Image.open(img_path).convert('RGB')
+        image = Image.open(img_path).convert('RGB')                 #[3,256,256]
         mask_image = T.ToTensor()(image.copy())        
         image = self.transform(image)  
-        image = image.unsqueeze(0)
-        print(">>image")
-        print(image.shape)
-        image_embedding = vae.encode(image).latent_dist.sample()
-        print(image_embedding.shape)
+        image = image.unsqueeze(0)                                  #[1,3,256,256]
+        image_embedding = vae.encode(image).latent_dist.sample()    #[1,4,32,32]
 
-        mask = torch.ones_like(mask_image)
-        mask[:, :mask_image.shape[1]//2, :] = 0        
-        print(mask.shape)
+        mask = torch.ones_like(mask_image)  # (3,256,256)
+        mask[:, mask_image.shape[1]//2: , :] = 0        
         mask_image = mask_image * mask
         mask_image = T.ToPILImage()(mask_image)
         mask_image = self.transform(mask_image)  
         mask_image = mask_image.unsqueeze(0)
-        print(">>mask")
-        print(mask_image.shape)
         mask_image_embedding = vae.encode(mask_image).latent_dist.sample()
-        print(mask_image_embedding.shape)
+        del mask_image
         
         ref_image = Image.open(ref_img_path).convert('RGB')
         ref_image = self.transform(ref_image)  
         ref_image = ref_image.unsqueeze(0)
-        print(">>ref")
-        print(ref_image.shape)
         ref_image_embedding = vae.encode(ref_image).latent_dist.sample()
-        print(ref_image_embedding.shape)
+        del ref_image
         
         return phoneme, lm_lip, mask_image_embedding, ref_image_embedding, image_embedding, image
 
@@ -198,27 +190,26 @@ class Dataset(td.Dataset):
             
         if not all(img is None for img in batch_mask_image_embedding):
             batch_mask_image_embedding = [batch_mask_image_embedding[idx] for idx in keep_ids]
-            batch_mask_image_embedding = torch.stack(batch_mask_image_embedding)
+            batch_mask_image_embedding = torch.cat(batch_mask_image_embedding, dim=0)
         else:
             batch_mask_image_embedding = None
             
         if not all(img is None for img in batch_ref_image_embedding):
             batch_ref_image_embedding = [batch_ref_image_embedding[idx] for idx in keep_ids]
-            batch_ref_image_embedding = torch.stack(batch_ref_image_embedding)
+            batch_ref_image_embedding = torch.cat(batch_ref_image_embedding, dim=0)
         else:
             batch_ref_image_embedding = None
 
         if not all(img is None for img in batch_image_embedding):
             batch_image_embedding = [batch_image_embedding[idx] for idx in keep_ids]
-            batch_image_embedding = torch.stack(batch_image_embedding)
+            batch_image_embedding = torch.cat(batch_image_embedding, dim=0)
         else:
             batch_image_embedding = None
             
         if not all(img is None for img in batch_img):
             batch_img = [batch_img[idx] for idx in keep_ids]
-            batch_img = torch.stack(batch_img)
+            batch_img = torch.cat(batch_img, dim=0)
         else:
             batch_img = None
-            
-            
+                        
         return batch_phoneme, batch_lm, batch_mask_image_embedding, batch_ref_image_embedding, batch_image_embedding, batch_img

@@ -7,20 +7,20 @@
   "Setup": {
     "name": "ModelPhoneme",
     "suffix": "CV1",
-    "batch_train": 2,
-    "batch_test": 2,
+    "batch_train": 8,
+    "batch_test": 8,
     "workers_train": 0,
     "workers_test": 0,
     "epochs": 50,
-    "log_interval": 50,
+    "log_interval": 10,
     "saved_models_path": "./assets"
   },
   "Model": {
     "class": "model_phoneme.model.Model",
     "args": {
-      "pretrained": false,
       "img_dim": 32,
-      "lm_dim": 128
+      "lm_dim": 128,
+      "pretrained": false
     }
   },
   "Optimizer": {
@@ -41,11 +41,11 @@
   "Dataset": {
     "class": "model_phoneme.dataset.Dataset",
     "args": {
-      "datalist_root": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/data.txt",
+      "datalist_root": "/home/anhldt/ai_learner/AudioClip/assets/data.txt",
       "audio_dataroot": "",
-      "visual_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/images",
-      "lm_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/face_meshes",
-      "transcript_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/transcripts",
+      "visual_dataroot": "/data/anhldt/ai/MEAD/M003/images",
+      "lm_dataroot": "/data/anhldt/ai/MEAD/M003/face_meshes",
+      "transcript_dataroot": "/data/anhldt/ai/MEAD/M003/transcripts",
       "fps": 25,
       "sample_rate": 22050,
       "n_mels": 80,
@@ -99,13 +99,13 @@
     "Performance": {
       "window_name": null,
       "x_label": "#Epochs",
-      "y_label": "Cosine Similarity",
+      "y_label": "MAE",
       "width": 1890,
       "height": 416,
       "lines": [
         {
-          "line_label": "Val. CSim.",
-          "class": "ignite.metrics.CosineSimilarity",
+          "line_label": "Val. MAE.",
+          "class": "ignite.metrics.MeanAbsoluteError",
           "args": {},
           "is_checkpoint": true
         }
