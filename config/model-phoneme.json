@@ -18,7 +18,9 @@
   "Model": {
     "class": "model_phoneme.model.Model",
     "args": {
-      "pretrained": false
+      "pretrained": false,
+      "img_dim": 32,
+      "lm_dim": 128
     }
   },
   "Optimizer": {
@@ -48,7 +50,7 @@
       "sample_rate": 22050,
       "n_mels": 80,
       "n_fft": 800,
-      "img_size": 224,
+      "img_size": 256,
       "training": {"key": "train", "yes": true, "no": false}
     }
   },

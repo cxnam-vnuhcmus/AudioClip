@@ -10,28 +10,30 @@ from typing import Optional
 
 from model_phoneme.phoneme_encoder import PhonemeEncoder
 from model_phoneme.landmark_encoder import LandmarkEncoder
-from model_phoneme.visual_encoder import FaceImageEncoder
+# from model_phoneme.visual_encoder import FaceImageEncoder
 from model_phoneme.attention import CrossAttention
 
 class Model(nn.Module):
 
     def __init__(self,
-                 embed_dim: int = 1024,
-                 pretrained: Union[bool, str] = True):
+                 pretrained: Union[bool, str] = True,
+                 img_dim: int,
+                 lm_dim: int):
         super().__init__()
         
         self.pretrained = pretrained
+        self.img_dim = img_dim
+        self.lm_dim = lm_dim
         
         self.phoneme = PhonemeEncoder()
         self.landmark = LandmarkEncoder()
-        self.visual = FaceImageEncoder(pretrained=True)
+        # self.visual = FaceImageEncoder(pretrained=True)
         
-        self.attention = CrossAttention(query_dim=128, context_dim=128)
+        self.attention = CrossAttention(query_dim=self.img_dim * self.img_dim, context_dim=2*self.lm_dim)
 
         if isinstance(self.pretrained, str):
             self.load_state_dict(torch.load(self.pretrained, map_location='cpu'), strict=False)
 
-        self.embed_dim = embed_dim
         
         self.logit_scale_pl = torch.nn.Parameter(torch.log(torch.ones([]) * 100))
 
@@ -53,37 +55,35 @@ class Model(nn.Module):
     def forward(self,
                 phoneme: Optional[torch.Tensor] = None,
                 landmark: Optional[torch.Tensor] = None,
-                visual: Optional[torch.Tensor] = None,
-                mask: Optional[torch.Tensor] = None,
-                ref: Optional[torch.Tensor] = None
+                mask_features: Optional[torch.Tensor] = None,
+                ref_features: Optional[torch.Tensor] = None,
+                visual_features: Optional[torch.Tensor] = None,
+                visual: Optional[torch.Tensor] = None
                 ):
 
         phoneme_features = None
         landmark_features = None
-        visual_features = None
-        mask_features = None
-        ref_features = None
-        
         if phoneme is not None:
             phoneme_features = self.encode_phoneme(phoneme)
             phoneme_features = phoneme_features / phoneme_features.norm(dim=-1, keepdim=True)
         if landmark is not None:
             landmark_features = self.encode_landmark(landmark)
             landmark_features = landmark_features / landmark_features.norm(dim=-1, keepdim=True)
-        if visual is not None:
-            visual_features = self.encode_visual(visual)
-            visual_features = visual_features / visual_features.norm(dim=-1, keepdim=True)
-        if mask is not None:
-            mask_features = self.encode_visual(mask)
-            mask_features = mask_features / mask_features.norm(dim=-1, keepdim=True)
-        if ref is not None:
-            ref_features = self.encode_visual(ref)
-            ref_features = ref_features / ref_features.norm(dim=-1, keepdim=True)
-            
-        query_features = torch.cat((phoneme_features, landmark_features), dim=1)
-        context_features = torch.cat((mask_features, ref_features), dim=1)
+        
+        print(mask_features.shape)    
+        print(ref_features.shape)    
+        mask_features_view = mask_features.view(mask_features.shape[0], mask_features.shape[1], -1)
+        ref_features_view = ref_features.view(ref_features.shape[0], ref_features.shape[1], -1)
+        print(mask_features_view.shape)    
+        print(ref_features_view.shape)    
+        query_features = torch.stack((mask_features_view, ref_features_view), dim=1)
+        print(query_features.shape)    
+        context_features = torch.cat((phoneme_features, landmark_features), dim=1)
+        print(context_features.shape)    
         
         output = self.attention(query_features, context_features)
+        
+        print(output.shape)
         
         logit_scale_pl = torch.clamp(self.logit_scale_pl.exp(), min=1.0, max=100.0)
 
@@ -94,7 +94,7 @@ class Model(nn.Module):
 
         loss = self.loss_fn(logits_phoneme_landmark)
 
-        return (phoneme_features, landmark_features, visual_features, mask_features, ref_features), loss
+        return (phoneme_features, landmark_features, mask_features, ref_features, visual_features, visual), loss
 
     def loss_fn(self, logits_phoneme_landmark):
         batch_size = logits_phoneme_landmark.shape[0]
@@ -128,28 +128,30 @@ class Model(nn.Module):
         return 'Cross Entropy'
         
     def training_step_imp(model, batch, device) -> torch.Tensor:
-        phoneme, landmark, visual, mask, ref = batch
+        phoneme, landmark, mask, ref, visual_feat, visual = batch
 
         _, loss = model(
             phoneme = phoneme, 
             landmark = landmark,
-            visual = visual,
             mask = mask,
-            ref = ref
+            ref = ref,
+            visual_feat = visual_feat,
+            visual = visual,
         )
 
         return loss
 
     def eval_step_imp(model, batch, device, eval_loader) -> Tuple[torch.Tensor, torch.Tensor]:
         with torch.no_grad():
-            phoneme, landmark, visual, mask, ref = batch
+            phoneme, landmark, mask, ref, visual_feat, visual = batch
 
-            (phoneme_features, landmark_features, visual_features, mask_features, ref_features), _ = model(
+            (phoneme_features, landmark_features, mask_features, ref_features, visual_features, visual), _ = model(
                 phoneme = phoneme, 
                 landmark = landmark,
-                visual = visual,
                 mask = mask,
-                ref = ref
+                ref = ref,
+                visual_feat = visual_feat,
+                visual = visual,
             )
             
         return phoneme_features, landmark_features

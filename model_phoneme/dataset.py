@@ -154,20 +154,30 @@ class Dataset(td.Dataset):
         mask_image = T.ToTensor()(image.copy())        
         image = self.transform(image)  
         image = image.unsqueeze(0)
+        print(">>image")
+        print(image.shape)
         image_embedding = vae.encode(image).latent_dist.sample()
+        print(image_embedding.shape)
 
         mask = torch.ones_like(mask_image)
-        mask[:, mask_image.shape[1]:, :] = 0        
+        mask[:, :mask_image.shape[1]//2, :] = 0        
+        print(mask.shape)
         mask_image = mask_image * mask
         mask_image = T.ToPILImage()(mask_image)
         mask_image = self.transform(mask_image)  
         mask_image = mask_image.unsqueeze(0)
+        print(">>mask")
+        print(mask_image.shape)
         mask_image_embedding = vae.encode(mask_image).latent_dist.sample()
+        print(mask_image_embedding.shape)
         
         ref_image = Image.open(ref_img_path).convert('RGB')
         ref_image = self.transform(ref_image)  
         ref_image = ref_image.unsqueeze(0)
+        print(">>ref")
+        print(ref_image.shape)
         ref_image_embedding = vae.encode(ref_image).latent_dist.sample()
+        print(ref_image_embedding.shape)
         
         return phoneme, lm_lip, mask_image_embedding, ref_image_embedding, image_embedding, image
 
