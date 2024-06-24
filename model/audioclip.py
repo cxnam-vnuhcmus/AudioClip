@@ -270,7 +270,7 @@ class AudioCLIP(CLIP):
 
         return loss
 
-    def eval_step_imp(model, batch, device, eval_loader) -> Tuple[torch.Tensor, torch.Tensor]:
+    def eval_step_imp(model, batch, device) -> Tuple[torch.Tensor, torch.Tensor]:
         with torch.no_grad():
             audio, image, text = batch
 

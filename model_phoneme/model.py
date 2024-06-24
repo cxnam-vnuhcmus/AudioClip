@@ -31,20 +31,23 @@ class Model(nn.Module):
         # self.visual = FaceImageEncoder(pretrained=True)
         
         self.attention = CrossAttention(query_dim=self.img_dim * self.img_dim, context_dim=self.lm_dim)
-        # self.post_conv = nn.Sequential(
-        #     nn.Conv2d(8, 4, 5, padding=1),
-        #     nn.BatchNorm2d(4),
-        #     nn.ReLU(inplace=True),
-        #     nn.Conv2d(4, 4, 3, padding=1),
-        #     nn.BatchNorm2d(4),
-        #     nn.ReLU(inplace=True)
-        # )
-        self.postconv = nn.Linear(1024,512)
-        # self.postconv = nn.Conv2d(in_channels=8, out_channels=4, kernel_size=3, stride=1, padding=1)
+        self.postconv = nn.Sequential(
+            nn.Conv2d(8, 4, 3, padding=1),
+            nn.BatchNorm2d(4),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(4, 4, 3, padding=1),
+            nn.BatchNorm2d(4),
+            nn.ReLU(inplace=True)
+        )
+        for layer in self.postconv.children():
+            if isinstance(layer, nn.Conv2d):
+                nn.init.xavier_uniform_(layer.weight)
+            elif isinstance(layer, nn.BatchNorm2d):
+                nn.init.constant_(layer.weight, 1)
+                nn.init.constant_(layer.bias, 0)
 
         if isinstance(self.pretrained, str):
             self.load_state_dict(torch.load(self.pretrained, map_location='cpu'), strict=False)
-
         
         self.logit_scale_pl = torch.nn.Parameter(torch.log(torch.ones([]) * 100))
 
@@ -92,30 +95,29 @@ class Model(nn.Module):
         context_features = torch.stack((phoneme_features, landmark_features), dim=1)
         
         output = self.attention(query_features, context_features)   #[2,8,32*32]
-        output = self.postconv(output)                             #[2,8,512]
-        pred_features = output.view(output.shape[0], 4, 32, 32)
+        output = output.view(output.shape[0], 8, 32, 32)            #[2,8,32,32]
+        pred_features = self.postconv(output)                              #[2,4,32,32]     
+        pred_features = nn.Parameter(pred_features, requires_grad=True)   
+        
+        loss = self.loss_fn(phoneme_features, landmark_features, pred_features, visual_features)
+
+        return pred_features, loss
+
+    def loss_fn(self, phoneme_features, landmark_features, pred_features, gt_features):
+        batch_size = phoneme_features.shape[0]
+
+        #CLIP loss
+        reference = torch.arange(
+            batch_size,
+            dtype=torch.int64,
+            device=self.device
+        )
         
         logit_scale_pl = torch.clamp(self.logit_scale_pl.exp(), min=1.0, max=100.0)
         logits_phoneme_landmark = None
         if (phoneme_features is not None) and (landmark_features is not None):
             logits_phoneme_landmark = logit_scale_pl * phoneme_features @ landmark_features.T
 
-        loss = self.loss_fn(logits_phoneme_landmark, pred_features, visual_features)
-
-        return (pred_features, visual_features, visual), loss
-
-    def loss_fn(self, logits_phoneme_landmark, pred_features, gt_features):
-        batch_size = logits_phoneme_landmark.shape[0]
-
-        reference = torch.arange(
-            batch_size,
-            dtype=torch.int64,
-            device=self.device
-        )
-
-        loss = torch.tensor(0.0, dtype=torch.int64, device=self.device)
-
-        #CLIP loss
         loss_pl = F.cross_entropy(
             logits_phoneme_landmark, reference
         ) + F.cross_entropy(
@@ -128,8 +130,9 @@ class Model(nn.Module):
         #Cosine Similarity loss
         pred_flat = pred_features.view(batch_size, -1)
         gt_flat = gt_features.view(batch_size, -1)
-        cos_sim_loss = F.cosine_similarity(pred_flat, gt_flat, dim=1)
+        cos_sim_loss = 1 - F.cosine_similarity(pred_flat, gt_flat, dim=1).mean()
         
+        #Total loss
         loss = loss_pl * 0.2 + mae_loss * 0.4 + cos_sim_loss * 0.4
 
         return loss
@@ -152,11 +155,11 @@ class Model(nn.Module):
 
         return loss
 
-    def eval_step_imp(model, batch, device, eval_loader) -> Tuple[torch.Tensor, torch.Tensor]:
+    def eval_step_imp(model, batch, device) -> Tuple[torch.Tensor, torch.Tensor]:
         with torch.no_grad():
             phoneme, landmark, mask, ref, visual_feat, visual = batch
 
-            (pred_features, visual_features, visual), _ = model(
+            pred_features, _ = model(
                 phoneme = phoneme, 
                 landmark = landmark,
                 mask_features = mask,
@@ -164,5 +167,6 @@ class Model(nn.Module):
                 visual_features = visual_feat,
                 visual = visual,
             )
-            
-        return pred_features, visual_features
+        pred_features = pred_features.view(pred_features.shape[0], -1)
+        visual_feat = visual_feat.view(visual_feat.shape[0], -1)
+        return pred_features, visual_feat

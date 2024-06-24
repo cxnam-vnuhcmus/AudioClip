@@ -6,7 +6,7 @@ import numpy as np
 import re
 from g2p_en import G2p
 import numpy as np
-
+import os
 
 class PhonemeEncoder(nn.Module):
     def __init__(self, dim_out=128):

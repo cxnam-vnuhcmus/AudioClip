@@ -7,12 +7,12 @@
   "Setup": {
     "name": "ModelPhoneme",
     "suffix": "CV1",
-    "batch_train": 8,
-    "batch_test": 8,
+    "batch_train": 32,
+    "batch_test": 32,
     "workers_train": 0,
     "workers_test": 0,
     "epochs": 50,
-    "log_interval": 10,
+    "log_interval": 50,
     "saved_models_path": "./assets"
   },
   "Model": {

@@ -117,52 +117,16 @@ def run(experiment_name: str,
         
         model: _interfaces.AbstractNet = Network(**model_args)
 
-        if hasattr(train_loader.dataset, 'class_weights'):
-            model.register_buffer('class_weights', train_loader.dataset.class_weights.clone().exp(), persistent=False)
-        if hasattr(train_loader.dataset, 'label_to_class_idx'):
-            model.label_to_class_idx = {idx: lb for idx, lb in train_loader.dataset.label_to_class_idx.items()}
-
         model = torch.nn.DataParallel(model, device_ids=range(num_gpus))
         model = model.to(device)
-
+                        
         for p in model.parameters():
             p.requires_grad = True
-
-        # # enable only audio-related parameters
-        # for p in model.module.audio.parameters():
-        #     p.requires_grad = True
-
-        # # disable fbsp-parameters
-        # for p in model.module.audio.fbsp.parameters():
-        #     p.requires_grad = False
-
-        # disable logit scaling
-        # model.module.logit_scale_ai.requires_grad = False
-        # model.module.logit_scale_at.requires_grad = False
 
         # add only enabled parameters to optimizer's list
         param_groups = [
             {'params': [p for p in model.module.parameters() if p.requires_grad]}
         ]
-
-        # enable fbsp-parameters
-        # for p in model.module.audio.fbsp.parameters():
-        #     p.requires_grad = True
-
-        # enable logit scaling
-        # model.module.logit_scale_ai.requires_grad = True
-        # model.module.logit_scale_at.requires_grad = True
-
-        # add fbsp- and logit scaling parameters to a separate group without weight decay
-        # param_groups.append({
-        #     'params': [
-        #         p for p in model.module.audio.fbsp.parameters()
-        #     ] + [
-        #         model.module.logit_scale_ai,
-        #         model.module.logit_scale_at
-        #     ],
-        #     'weight_decay': 0.0
-        # })
 
         Optimizer: Type = _utils.load_class(optimizer_class)
         optimizer: torch.optim.Optimizer = Optimizer(
@@ -233,8 +197,7 @@ def run(experiment_name: str,
 
             if loss.ndim > 0:
                 loss = loss.mean()
-
-            loss.backward(retain_graph=False)
+            loss.backward()
             optimizer.step(None)
 
             return loss.item()
@@ -242,7 +205,7 @@ def run(experiment_name: str,
         def eval_step(_: ieng.Engine, batch) -> _interfaces.TensorPair:
             model.eval()
             
-            return Network.eval_step_imp(model, batch, device, eval_loader)
+            return Network.eval_step_imp(model, batch, device)
             
         trainer = ieng.Engine(training_step)
         validator_train = ieng.Engine(eval_step)
@@ -279,34 +242,35 @@ def run(experiment_name: str,
         performance_metrics = {**default_metrics, **performance_metrics}
         checkpoint_metrics = list()
 
-        for scope_name, scope in performance_metrics.items():
-            scope['window_name'] = scope.get('window_name', scope_name) or scope_name
+        if use_visdom:
+            for scope_name, scope in performance_metrics.items():
+                scope['window_name'] = scope.get('window_name', scope_name) or scope_name
 
-            for line in scope['lines']:
-                if 'object' not in line:
-                    line['object']: imet.Metric = _utils.load_class(line['class'])(**line['args'])
+                for line in scope['lines']:
+                    if 'object' not in line:
+                        line['object']: imet.Metric = _utils.load_class(line['class'])(**line['args'])
 
-                line['metric_label'] = '{}: {}'.format(scope['window_name'], line['line_label'])
+                    line['metric_label'] = '{}: {}'.format(scope['window_name'], line['line_label'])
 
-                line['update_rate'] = line.get('update_rate', 'epoch')
-                line_suffixes = list()
-                if line['update_rate'] == 'iteration':
-                    line['object'].attach(trainer, line['metric_label'])
-                    line['train'] = False
-                    line['test'] = False
+                    line['update_rate'] = line.get('update_rate', 'epoch')
+                    line_suffixes = list()
+                    if line['update_rate'] == 'iteration':
+                        line['object'].attach(trainer, line['metric_label'])
+                        line['train'] = False
+                        line['test'] = False
 
-                    line_suffixes.append(' Train.')
+                        line_suffixes.append(' Train.')
 
-                if line.get('train', True):
-                    line['object'].attach(validator_train, line['metric_label'])
-                    line_suffixes.append(' Train.')
-                if line.get('test', True):
-                    line['object'].attach(validator_eval, line['metric_label'])
-                    line_suffixes.append(' Eval.')
+                    if line.get('train', True):
+                        line['object'].attach(validator_train, line['metric_label'])
+                        line_suffixes.append(' Train.')
+                    if line.get('test', True):
+                        line['object'].attach(validator_eval, line['metric_label'])
+                        line_suffixes.append(' Eval.')
 
                     if line.get('is_checkpoint', False):
                         checkpoint_metrics.append(line['metric_label'])
-                if use_visdom:
+
                     for line_suffix in line_suffixes:
                         _visdom.plot_line(
                             vis=vis,
@@ -320,35 +284,35 @@ def run(experiment_name: str,
                             draw_marker=(line['update_rate'] == 'epoch')
                         )
 
-        if checkpoint_metrics:
-            score_name = 'performance'
+            if checkpoint_metrics:
+                score_name = 'performance'
 
-            def get_score(engine: ieng.Engine) -> float:
-                current_mode = getattr(engine.state.dataloader.iterable.dataset, dataset_args['training']['key'])
-                val_mode = dataset_args['training']['no']
+                def get_score(engine: ieng.Engine) -> float:
+                    current_mode = getattr(engine.state.dataloader.iterable.dataset, dataset_args['training']['key'])
+                    val_mode = dataset_args['training']['no']
 
-                score = 0.0
-                if current_mode == val_mode:
-                    for metric_name in checkpoint_metrics:
-                        try:
-                            score += engine.state.metrics[metric_name]
-                        except KeyError:
-                            pass
+                    score = 0.0
+                    if current_mode == val_mode:
+                        for metric_name in checkpoint_metrics:
+                            try:
+                                score += engine.state.metrics[metric_name]
+                            except KeyError:
+                                pass
 
-                return score
+                    return score
 
-            model_saver = ihan.ModelCheckpoint(
-                os.path.join(saved_models_path, visdom_env_name),
-                filename_prefix=visdom_env_name,
-                score_name=score_name,
-                score_function=get_score,
-                n_saved=3,
-                # save_as_state_dict=True,
-                require_empty=False,
-                create_dir=True
-            )
+                model_saver = ihan.ModelCheckpoint(
+                    os.path.join(saved_models_path, visdom_env_name),
+                    filename_prefix=visdom_env_name,
+                    score_name=score_name,
+                    score_function=get_score,
+                    n_saved=3,
+                    # save_as_state_dict=True,
+                    require_empty=False,
+                    create_dir=True
+                )
 
-            validator_eval.add_event_handler(ieng.Events.EPOCH_COMPLETED, model_saver, {model_name: model})
+                validator_eval.add_event_handler(ieng.Events.EPOCH_COMPLETED, model_saver, {model_name: model})
 
         if not skip_train_val:
             @trainer.on(ieng.Events.STARTED)
@@ -378,15 +342,14 @@ def run(experiment_name: str,
                         engine.state.epoch, num_iter, len(train_loader), engine.state.output
                     )
                 )
-
-                x_pos = engine.state.epoch + num_iter / len(train_loader) - 1
-                for scope_name, scope in performance_metrics.items():
-                    for line in scope['lines']:
-                        if line['update_rate'] == 'iteration':
-                            line_label = '{} Train.'.format(line['line_label'])
-                            line_value = engine.state.metrics[line['metric_label']]
-                            
-                            if use_visdom:
+                
+                if use_visdom:
+                    x_pos = engine.state.epoch + num_iter / len(train_loader) - 1
+                    for scope_name, scope in performance_metrics.items():
+                        for line in scope['lines']:
+                            if line['update_rate'] == 'iteration':
+                                line_label = '{} Train.'.format(line['line_label'])
+                                line_value = engine.state.metrics[line['metric_label']]
                                 if engine.state.epoch >= 1:
                                     _visdom.plot_line(
                                         vis=vis,
@@ -429,14 +392,14 @@ def run(experiment_name: str,
             tqdm_info = [
                 'Epoch: {}'.format(engine.state.epoch)
             ]
-            for scope_name, scope in performance_metrics.items():
-                for line in scope['lines']:
-                    if line['update_rate'] == 'epoch':
-                        try:
-                            line_label = '{} {}'.format(line['line_label'], run_type)
-                            line_value = validator.state.metrics[line['metric_label']]
-                            
-                            if use_visdom:
+            
+            if use_visdom:
+                for scope_name, scope in performance_metrics.items():
+                    for line in scope['lines']:
+                        if line['update_rate'] == 'epoch':
+                            try:
+                                line_label = '{} {}'.format(line['line_label'], run_type)
+                                line_value = validator.state.metrics[line['metric_label']]
                                 _visdom.plot_line(
                                     vis=vis,
                                     window_name=scope['window_name'],
@@ -449,9 +412,9 @@ def run(experiment_name: str,
                                     draw_marker=True
                                 )
 
-                            tqdm_info.append('{}: {:.4f}'.format(line_label, line_value))
-                        except KeyError:
-                            pass
+                                tqdm_info.append('{}: {:.4f}'.format(line_label, line_value))
+                            except KeyError:
+                                pass
 
             tqdm.tqdm.write('{} results - {}'.format(run_type, '; '.join(tqdm_info)))
 
@@ -465,34 +428,31 @@ def run(experiment_name: str,
             log_validation(engine, False)
 
             if engine.state.epoch == 1:
-                summary = _utils.build_summary_str(
-                    experiment_name=experiment_name,
-                    model_short_name=model_name,
-                    model_class=model_class,
-                    model_args=model_args,
-                    optimizer_class=optimizer_class,
-                    optimizer_args=optimizer_args,
-                    dataset_class=dataset_class,
-                    dataset_args=dataset_args,
-                    transforms=transforms,
-                    epochs=epochs,
-                    batch_train=batch_train,
-                    log_interval=log_interval,
-                    saved_models_path=saved_models_path,
-                    scheduler_class=scheduler_class,
-                    scheduler_args=scheduler_args
-                )
-                
                 if use_visdom:
+                    summary = _utils.build_summary_str(
+                        experiment_name=experiment_name,
+                        model_short_name=model_name,
+                        model_class=model_class,
+                        model_args=model_args,
+                        optimizer_class=optimizer_class,
+                        optimizer_args=optimizer_args,
+                        dataset_class=dataset_class,
+                        dataset_args=dataset_args,
+                        transforms=transforms,
+                        epochs=epochs,
+                        batch_train=batch_train,
+                        log_interval=log_interval,
+                        saved_models_path=saved_models_path,
+                        scheduler_class=scheduler_class,
+                        scheduler_args=scheduler_args
+                    )
                     _visdom.create_summary_window(
                         vis=vis,
                         visdom_env_name=visdom_env_name,
                         experiment_name=experiment_name,
                         summary=summary
                     )
-
-            if use_visdom:
-                vis.save([visdom_env_name])
+                    vis.save([visdom_env_name])
 
             prog_bar_epochs.update(1)
 
@@ -505,8 +465,6 @@ def run(experiment_name: str,
             if vis_pid is not None:
                 tqdm.tqdm.write('Stopping visdom')
                 os.kill(vis_pid, signal.SIGTERM)
-
-        if use_visdom:
             del vis
         del train_loader
         del eval_loader

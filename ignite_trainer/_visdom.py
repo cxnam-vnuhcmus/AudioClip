@@ -17,7 +17,7 @@ def calc_ytick_range(vis: visdom.Visdom, window_name: str, env: Optional[str] = 
     lower_bound, upper_bound = -1.0, 1.0
 
     stats = vis.get_window_data(win=window_name, env=env)
-
+    
     if stats:
         stats = json.loads(stats)
 
@@ -43,9 +43,9 @@ def calc_ytick_range(vis: visdom.Visdom, window_name: str, env: Optional[str] = 
 
                         idx += 1
                 stats_sanitized = np.array(stats_sanitized, dtype="object")
-
-                q25_sanitized = np.array([np.quantile(item, 0.25) for item in stats_sanitized])
-                q75_sanitized = np.array([np.quantile(item, 0.75) for item in stats_sanitized])
+                
+                q25_sanitized = np.array([np.quantile(item, 0.25) for item in stats_sanitized if len(item) > 0])
+                q75_sanitized = np.array([np.quantile(item, 0.75) for item in stats_sanitized if len(item) > 0])
 
                 iqr_sanitized = np.sum(q75_sanitized - q25_sanitized)
                 lower_bound = np.min(q25_sanitized) - 1.5 * iqr_sanitized

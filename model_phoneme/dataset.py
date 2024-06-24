@@ -67,6 +67,8 @@ FACEMESH_LIPS_IDX = [0, 13, 14, 17, 37, 39, 40, 61, 78, 80, 81, 82, 84, 87, 88, 
 
 SEQUENCE_LIPS_SHAPE_IDX = [164,167,165,92,186,57,43,106,182,83,18,313,406,335,273,287,410,322,391,393]
 
+
+
 class Dataset(td.Dataset):
 
     def __init__(self, 
@@ -91,11 +93,16 @@ class Dataset(td.Dataset):
         self.transform = T.Compose([
             T.Resize((self.img_size , self.img_size )),
             T.ToTensor(),
-            T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+            T.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
         ])   
+        self.inv_normalize = T.Compose([
+            T.Normalize(mean=[-1.0, -1.0, -1.0], std=[1.0/0.5, 1.0/0.5, 1.0/0.5]),
+            T.ToPILImage()
+        ]) 
         
         self.vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-ema")
         self.vae = self.vae.to(self.device)
+        
         
         filelists = []
         with open(self.datalist_root, 'r') as file:
@@ -104,11 +111,10 @@ class Dataset(td.Dataset):
                 txt_name = os.path.join(self.transcript_dataroot, f'{line}.json')
                 with open(txt_name, "r") as f:
                     data = json.load(f)
-                    phonemes = []
                     for word in data['words']:
                         for phoneme in word['phonemes']:
-                            frame_start = phoneme["start"] * fps
-                            frame_end = phoneme["end"] * fps
+                            frame_start = phoneme["start"] * self.fps
+                            frame_end = phoneme["end"] * self.fps
                             frame_mid = int((frame_start + frame_end)/2)
                             frame_range = [frame_mid, frame_mid + 1, frame_mid - 1, frame_mid + 2, frame_mid - 2]
                             for frame_id in frame_range:
@@ -158,7 +164,9 @@ class Dataset(td.Dataset):
         image = self.transform(gt_image.copy())  
         image = image.to(self.device)
         image = image.unsqueeze(0)                                  #[1,3,256,256]
-        image_embedding = self.vae.encode(image).latent_dist.sample()    #[1,4,32,32]
+        with torch.no_grad():
+            image_embedding = self.vae.encode(image).latent_dist.sample()    #[1,4,32,32]
+        del image
 
         mask_image = T.ToTensor()(gt_image.copy())        
         mask = torch.ones_like(mask_image)  # (3,256,256)
@@ -168,14 +176,16 @@ class Dataset(td.Dataset):
         mask_image = self.transform(mask_image)  
         mask_image = mask_image.to(self.device)
         mask_image = mask_image.unsqueeze(0)
-        mask_image_embedding = self.vae.encode(mask_image).latent_dist.sample()
+        with torch.no_grad():
+            mask_image_embedding = self.vae.encode(mask_image).latent_dist.sample()
         del mask_image
         
         ref_image = Image.open(ref_img_path).convert('RGB')
         ref_image = self.transform(ref_image)  
         ref_image = ref_image.to(self.device)
         ref_image = ref_image.unsqueeze(0)
-        ref_image_embedding = self.vae.encode(ref_image).latent_dist.sample()
+        with torch.no_grad():
+            ref_image_embedding = self.vae.encode(ref_image).latent_dist.sample()
         del ref_image
         
         gt_image = T.ToTensor()(gt_image).to(self.device)
