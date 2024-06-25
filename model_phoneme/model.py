@@ -99,9 +99,7 @@ class Model(nn.Module):
         pred_features = self.postconv(output)                              #[2,4,32,32]     
         pred_features = nn.Parameter(pred_features, requires_grad=True)   
         
-        loss = self.loss_fn(phoneme_features, landmark_features, pred_features, visual_features)
-
-        return pred_features, loss
+        return (phoneme_features, landmark_features, pred_features)
 
     def loss_fn(self, phoneme_features, landmark_features, pred_features, gt_features):
         batch_size = phoneme_features.shape[0]
@@ -137,36 +135,30 @@ class Model(nn.Module):
 
         return loss
 
-    @property
-    def loss_fn_name(self) -> str:
-        return 'Cross Entropy'
         
-    def training_step_imp(model, batch, device) -> torch.Tensor:
-        phoneme, landmark, mask, ref, visual_feat, visual = batch
+    def training_step_imp(self, batch, device) -> torch.Tensor:
+        phoneme, landmark, mask, ref, visual_features, visual = batch
 
-        _, loss = model(
+        (phoneme_features, landmark_features, pred_features) = self(
             phoneme = phoneme, 
             landmark = landmark,
             mask_features = mask,
-            ref_features = ref,
-            visual_features = visual_feat,
-            visual = visual,
+            ref_features = ref
         )
+        loss = self.module.loss_fn(phoneme_features, landmark_features, pred_features, visual_features)
 
         return loss
 
-    def eval_step_imp(model, batch, device) -> Tuple[torch.Tensor, torch.Tensor]:
+    def eval_step_imp(self, batch, device) -> Tuple[torch.Tensor, torch.Tensor]:
         with torch.no_grad():
-            phoneme, landmark, mask, ref, visual_feat, visual = batch
+            phoneme, landmark, mask, ref, visual_features, visual = batch
 
-            pred_features, _ = model(
+            (phoneme_features, landmark_features, pred_features) = self(
                 phoneme = phoneme, 
                 landmark = landmark,
                 mask_features = mask,
-                ref_features = ref,
-                visual_features = visual_feat,
-                visual = visual,
+                ref_features = ref
             )
         pred_features = pred_features.view(pred_features.shape[0], -1)
-        visual_feat = visual_feat.view(visual_feat.shape[0], -1)
-        return pred_features, visual_feat
+        visual_features = visual_features.view(visual_features.shape[0], -1)
+        return {"y_pred": pred_features, "y": visual_features}

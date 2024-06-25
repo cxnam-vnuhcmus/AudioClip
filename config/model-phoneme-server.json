@@ -1,24 +1,20 @@
 {
-  "Visdom": {
-    "host": "localhost",
-    "port": "8097",
-    "env_path": "./assets"
-  },
   "Setup": {
-    "name": "Multimodal-Audio",
-    "suffix": "CV3",
-    "batch_train": 1,
-    "batch_test": 1,
+    "name": "ModelPhoneme",
+    "suffix": "CV1",
+    "batch_train": 32,
+    "batch_test": 32,
     "workers_train": 0,
     "workers_test": 0,
     "epochs": 50,
-    "log_interval": 10,
+    "log_interval": 50,
     "saved_models_path": "./assets"
   },
   "Model": {
-    "class": "model.audioclip.AudioCLIP",
+    "class": "model_phoneme.model.Model",
     "args": {
-      "multilabel": false,
+      "img_dim": 32,
+      "lm_dim": 128,
       "pretrained": false
     }
   },
@@ -38,18 +34,18 @@
     }
   },
   "Dataset": {
-    "class": "utils.datasets.MEAD",
+    "class": "model_phoneme.dataset.Dataset",
     "args": {
-      "audio_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/audios",
-      "visual_dataroot": "",
-      "lm_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/face_meshes",
-      "num_frames": 15,
+      "datalist_root": "./assets/data.txt",
+      "audio_dataroot": "",
+      "visual_dataroot": "/data/anhldt/ai/MEAD/M003/images",
+      "lm_dataroot": "/data/anhldt/ai/MEAD/M003/face_meshes",
+      "transcript_dataroot": "/data/anhldt/ai/MEAD/M003/transcripts",
       "fps": 25,
       "sample_rate": 22050,
       "n_mels": 80,
       "n_fft": 800,
-      "img_size": 128,
-      "lm_scale": 256,
+      "img_size": 256,
       "training": {"key": "train", "yes": true, "no": false}
     }
   },
@@ -94,21 +90,20 @@
       "train": false
     }
   ],
-  "Metrics": {
-    "Performance": {
-      "window_name": null,
-      "x_label": "#Epochs",
-      "y_label": "Cosine Similarity",
-      "width": 1890,
-      "height": 416,
-      "lines": [
-        {
-          "line_label": "Val. CSim.",
-          "class": "ignite.metrics.CosineSimilarity",
-          "args": {},
-          "is_checkpoint": true
-        }
-      ]
-    }
-  }
+  "Metrics": [
+      {
+          "label": "MSE",
+          "class": "ignite.metrics.MeanSquaredError",
+          "args": {"output_transform": ["y_pred", "y"]},
+          "use_for": ["val","test"],
+          "save_checkpoint": true
+      },
+      {
+          "label": "CustomMetric",
+          "class": "model_phoneme.loss.CustomMetric",
+          "args": {"output_transform": ["y_pred", "y"]},
+          "use_for": ["val","test"],
+          "save_checkpoint": false
+      }
+  ]
 }

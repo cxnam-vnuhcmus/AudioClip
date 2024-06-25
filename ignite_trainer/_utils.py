@@ -26,7 +26,6 @@ from typing import Union
 from typing import Callable
 from typing import Optional
 
-
 @contextlib.contextmanager
 def tqdm_stdout(orig_stdout: Optional[io.TextIOBase] = None):
 
