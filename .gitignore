@@ -104,3 +104,4 @@ dmypy.json
 #Checkpoint
 **/*.pt
 **/*.0
+**/image_*.jpg

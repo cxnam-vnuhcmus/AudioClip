@@ -140,7 +140,7 @@ class Dataset(td.Dataset):
         
     def __len__(self):
         return len(self.all_datas)
-        # return 20
+        # return 10
 
     def __getitem__(self, idx):
         (phoneme, lm_path, img_path) = self.all_datas[idx]

@@ -12,17 +12,22 @@ from model_phoneme.phoneme_encoder import PhonemeEncoder
 from model_phoneme.landmark_encoder import LandmarkEncoder
 # from model_phoneme.visual_encoder import FaceImageEncoder
 from model_phoneme.attention import CrossAttention
+from diffusers import AutoencoderKL
+from PIL import Image
+import torchvision.transforms as T
 
 class Model(nn.Module):
 
     def __init__(self,
                  img_dim: int,
                  lm_dim: int,
-                 pretrained: Union[bool, str] = True
+                 pretrained: Union[bool, str] = True,
+                 infer_samples: bool = False
                  ):
         super().__init__()
         
         self.pretrained = pretrained
+        self.infer_samples = infer_samples
         self.img_dim = img_dim
         self.lm_dim = lm_dim
         
@@ -46,11 +51,9 @@ class Model(nn.Module):
         #         nn.init.constant_(layer.weight, 1)
         #         nn.init.constant_(layer.bias, 0)
         self.linear = nn.Linear(8*32*32, 4*32*32)
-
-        if isinstance(self.pretrained, str):
-            self.load_state_dict(torch.load(self.pretrained, map_location='cpu'), strict=False)
         
         self.logit_scale_pl = torch.nn.Parameter(torch.log(torch.ones([]) * 100))
+        
 
     @property
     def device(self):
@@ -155,7 +158,7 @@ class Model(nn.Module):
 
         return loss
 
-    def eval_step_imp(self, batch, device) -> Tuple[torch.Tensor, torch.Tensor]:
+    def eval_step_imp(self, batch, device):
         with torch.no_grad():
             phoneme, landmark, mask, ref, visual_features, visual = batch
             visual_features = visual_features.view(visual_features.shape[0], -1)
@@ -168,14 +171,38 @@ class Model(nn.Module):
                 ref_features = ref
             )
         
-        # import json
-        # with open("./assets/pred_features.json", "w") as f:
-        #     json.dump(pred_features.tolist(), f)
-        # with open("./assets/gt_features.json", "w") as f:
-        #     json.dump(visual_features.tolist(), f)
-        # loss = nn.MSELoss()(pred_features, visual_features)
-        # with open("./assets/mse_loss.json", "w") as f:
-        #     json.dump(loss.item(), f)        
-        # print(visual_features.shape)
-        
         return {"y_pred": pred_features, "y": visual_features}
+        
+    def inference(self, batch, device, save_folder):
+        with torch.no_grad():
+            phoneme, landmark, mask, ref, visual_features, visual = batch
+            visual_features = visual_features.view(visual_features.shape[0], -1)
+            visual_features = visual_features.to(self.module.device)
+            
+            (_, _, pred_features) = self(
+                phoneme = phoneme, 
+                landmark = landmark,
+                mask_features = mask,
+                ref_features = ref
+            )
+            
+            pred_features = pred_features.detach().cpu()
+            pred_features = pred_features.view(pred_features.shape[0], 4, 32, 32) 
+            
+            inv_normalize = T.Compose([
+                T.Normalize(mean=[-1.0, -1.0, -1.0], std=[1.0/0.5, 1.0/0.5, 1.0/0.5]),
+                T.ToPILImage()
+            ]) 
+            
+            with torch.no_grad():
+                vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-ema")
+            
+                for i in range(pred_features.shape[0]):
+                    pf = pred_features[i].unsqueeze(0)
+                    samples = vae.decode(pf)
+                    output = samples.sample[0]
+                    inv_image = inv_normalize(output)
+                    inv_image.save(f'{save_folder}/image_{i:05d}.jpg')
+                
+                
+            

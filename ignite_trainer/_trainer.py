@@ -30,10 +30,11 @@ from collections import defaultdict
 from collections.abc import Iterable
 
 from ignite_trainer import _utils
-from ignite_trainer import _visdom
 from ignite_trainer import _interfaces
 
 from ignite.handlers.tensorboard_logger import *
+from ignite.handlers import Checkpoint, DiskSaver
+
 
 BATCH_TRAIN = 128
 BATCH_TEST = 1024
@@ -188,71 +189,40 @@ def run(experiment_name: str,
 
             return loss.item()
 
-        def eval_step(_: ieng.Engine, batch) -> _interfaces.TensorPair:
+        def eval_step(engine: ieng.Engine, batch) -> _interfaces.TensorPair:
             model.eval()
             
-            return Network.eval_step_imp(model, batch, device)
+            if model_args['infer_samples'] and ((engine.state.iteration - 1) % len(train_loader)) == 0:
+                save_folder = f"{saved_models_path}/samples"
+                os.makedirs(save_folder, exist_ok=True)
+                Network.inference(model, batch, device, save_folder)
+                return Network.eval_step_imp(model, batch, device)
+            else:
+                return Network.eval_step_imp(model, batch, device)
             
         trainer = ieng.Engine(training_step)
         validator_train = ieng.Engine(eval_step)
         validator_eval = ieng.Engine(eval_step)
 
         #Metrics
-        checkpoint_metrics = list()
+        # checkpoint_metrics = list()
         for metric_detail in performance_metrics:
             output_transform = (lambda output: list([output[key] for key in metric_detail['args']['output_transform']]))
             metric_obj: imet.Metric = _utils.load_class(metric_detail['class'])(output_transform=output_transform, device=device)
             metric_label = metric_detail.get('label', 'default_label')
             metric_use_for = metric_detail.get('use_for', [])
-            metric_save_checkpoint = metric_detail.get('save_checkpoint', False)
+            # metric_save_checkpoint = metric_detail.get('save_checkpoint', False)
             
             for use_for in metric_use_for:
                 if use_for == "val" and not skip_train_val:
                     metric_obj.attach(validator_train, metric_label)
                 elif use_for == "test":
                     metric_obj.attach(validator_eval, metric_label) 
-            if metric_save_checkpoint:
-                checkpoint_metrics.append(metric_label)
+            # if metric_save_checkpoint:
+            #     checkpoint_metrics.append(metric_label)
 
-        #Checkpoint
-        if checkpoint_metrics:
-            score_name = 'performance'
-
-            def get_score(engine: ieng.Engine) -> float:
-                current_mode = getattr(engine.state.dataloader.iterable.dataset, dataset_args['training']['key'])
-                val_mode = dataset_args['training']['no']
-
-                score = 0.0
-                if current_mode == val_mode:
-                    for metric_name in checkpoint_metrics:
-                        try:
-                            score += engine.state.metrics[metric_name]
-                        except KeyError:
-                            pass
-
-                return score
-
-            visdom_env_name = '{}_{}_{}{}'.format(
-                Dataset.__name__,
-                experiment_name,
-                model_name,
-                '-{}'.format(setup_suffix) if setup_suffix is not None else ''
-            )
-            
-            model_saver = ihan.ModelCheckpoint(
-                os.path.join(saved_models_path, visdom_env_name),
-                filename_prefix=visdom_env_name,
-                score_name=score_name,
-                score_function=get_score,
-                n_saved=3,
-                require_empty=False,
-                create_dir=True
-            )
-
-            validator_eval.add_event_handler(ieng.Events.EPOCH_COMPLETED, model_saver, {model_name: model})
-        
         # Create a logger
-        tb_logger = TensorboardLogger(log_dir="./assets/tb_logs")
+        tb_logger = TensorboardLogger(log_dir=f"{saved_models_path}/tb_logs")
         # Attach the logger to the trainer to log training loss at each iteration
         tb_logger.attach_output_handler(
             trainer,
@@ -260,6 +230,24 @@ def run(experiment_name: str,
             tag="training",
             output_transform=lambda loss: {"loss": loss}
         )
+        
+        #Save checkpoints
+        handler = Checkpoint(
+            {'model': model, 'optimizer': optimizer},
+            DiskSaver(f'{saved_models_path}/checkpoints', create_dir=True, require_empty=False),
+            n_saved=2,  # Số lượng checkpoint cần lưu
+            global_step_transform=lambda e, _: e.state.epoch  # Sử dụng số epoch làm global step
+        )
+        trainer.add_event_handler(ieng.Events.EPOCH_COMPLETED, handler)
+        
+        #Load checkpoints
+        if isinstance(model_args['pretrained'], str):
+            checkpoint = torch.load(model_args['pretrained'])
+            Checkpoint.load_objects(to_load={
+                'model': model,
+                'optimizer': optimizer
+            }, checkpoint=checkpoint)
+            print(f"Load checkpoint: {model_args['pretrained']}")
         
         # Events
         if not skip_train_val:

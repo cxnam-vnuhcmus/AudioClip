@@ -20,7 +20,7 @@ class AbstractNet(abc.ABC, torch.nn.Module):
     @abc.abstractmethod
     def loss_fn(self, y_pred: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         pass
-
+    
     @property
     @abc.abstractmethod
     def loss_fn_name(self) -> str:

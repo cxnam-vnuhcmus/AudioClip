@@ -6,8 +6,8 @@
     "batch_test": 16,
     "workers_train": 0,
     "workers_test": 0,
-    "epochs": 50,
-    "log_interval": 50,
+    "epochs": 100,
+    "log_interval": 100,
     "saved_models_path": "./assets"
   },
   "Model": {
@@ -15,7 +15,8 @@
     "args": {
       "img_dim": 32,
       "lm_dim": 128,
-      "pretrained": false
+      "pretrained": false,
+      "infer_samples": true
     }
   },
   "Optimizer": {
@@ -96,7 +97,7 @@
           "class": "ignite.metrics.MeanSquaredError",
           "args": {"output_transform": ["y_pred", "y"]},
           "use_for": ["val","test"],
-          "save_checkpoint": false
+          "save_checkpoint": true
       },
       {
           "label": "CustomMetric",
