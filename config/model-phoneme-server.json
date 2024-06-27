@@ -2,8 +2,8 @@
   "Setup": {
     "name": "ModelPhoneme",
     "suffix": "CV1",
-    "batch_train": 32,
-    "batch_test": 32,
+    "batch_train": 16,
+    "batch_test": 16,
     "workers_train": 0,
     "workers_test": 0,
     "epochs": 50,
@@ -34,11 +34,11 @@
     }
   },
   "Dataset": {
-    "class": "model_phoneme.dataset.Dataset",
+    "class": "model_phoneme.dataset_vae.Dataset",
     "args": {
       "datalist_root": "./assets/data.txt",
       "audio_dataroot": "",
-      "visual_dataroot": "/data/anhldt/ai/MEAD/M003/images",
+      "visual_dataroot": "/data/anhldt/ai/MEAD/M003/image_features",
       "lm_dataroot": "/data/anhldt/ai/MEAD/M003/face_meshes",
       "transcript_dataroot": "/data/anhldt/ai/MEAD/M003/transcripts",
       "fps": 25,
@@ -96,13 +96,13 @@
           "class": "ignite.metrics.MeanSquaredError",
           "args": {"output_transform": ["y_pred", "y"]},
           "use_for": ["val","test"],
-          "save_checkpoint": true
+          "save_checkpoint": false
       },
       {
           "label": "CustomMetric",
           "class": "model_phoneme.loss.CustomMetric",
           "args": {"output_transform": ["y_pred", "y"]},
-          "use_for": ["val","test"],
+          "use_for": [],
           "save_checkpoint": false
       }
   ]

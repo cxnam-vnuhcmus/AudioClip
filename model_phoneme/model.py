@@ -31,20 +31,21 @@ class Model(nn.Module):
         # self.visual = FaceImageEncoder(pretrained=True)
         
         self.attention = CrossAttention(query_dim=self.img_dim * self.img_dim, context_dim=self.lm_dim)
-        self.postconv = nn.Sequential(
-            nn.Conv2d(8, 4, 3, padding=1),
-            nn.BatchNorm2d(4),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(4, 4, 3, padding=1),
-            nn.BatchNorm2d(4),
-            nn.ReLU(inplace=True)
-        )
-        for layer in self.postconv.children():
-            if isinstance(layer, nn.Conv2d):
-                nn.init.xavier_uniform_(layer.weight)
-            elif isinstance(layer, nn.BatchNorm2d):
-                nn.init.constant_(layer.weight, 1)
-                nn.init.constant_(layer.bias, 0)
+        # self.postconv = nn.Sequential(
+        #     nn.Conv2d(8, 4, 3, padding=1),
+        #     nn.BatchNorm2d(4),
+        #     nn.ReLU(inplace=True),
+        #     nn.Conv2d(4, 4, 3, padding=1),
+        #     nn.BatchNorm2d(4),
+        #     nn.ReLU(inplace=True)
+        # )
+        # for layer in self.postconv.children():
+        #     if isinstance(layer, nn.Conv2d):
+        #         nn.init.xavier_uniform_(layer.weight)
+        #     elif isinstance(layer, nn.BatchNorm2d):
+        #         nn.init.constant_(layer.weight, 1)
+        #         nn.init.constant_(layer.bias, 0)
+        self.linear = nn.Linear(8*32*32, 4*32*32)
 
         if isinstance(self.pretrained, str):
             self.load_state_dict(torch.load(self.pretrained, map_location='cpu'), strict=False)
@@ -73,9 +74,7 @@ class Model(nn.Module):
                 phoneme: Optional[torch.Tensor] = None,
                 landmark: Optional[torch.Tensor] = None,
                 mask_features: Optional[torch.Tensor] = None,
-                ref_features: Optional[torch.Tensor] = None,
-                visual_features: Optional[torch.Tensor] = None,
-                visual: Optional[torch.Tensor] = None
+                ref_features: Optional[torch.Tensor] = None
                 ):
 
         phoneme_features = None
@@ -86,19 +85,23 @@ class Model(nn.Module):
         if landmark is not None:
             landmark_features = self.encode_landmark(landmark)
             landmark_features = landmark_features / landmark_features.norm(dim=-1, keepdim=True)
-        
+    
         mask_features.to(self.device)
         ref_features.to(self.device)
+        phoneme_features = nn.Parameter(phoneme_features, requires_grad=True)   
+        landmark_features = nn.Parameter(landmark_features, requires_grad=True)   
+        mask_features = nn.Parameter(mask_features, requires_grad=False)   
+        ref_features = nn.Parameter(ref_features, requires_grad=False)   
+        
         mask_features_view = mask_features.view(mask_features.shape[0], mask_features.shape[1], -1)
         ref_features_view = ref_features.view(ref_features.shape[0], ref_features.shape[1], -1)
         query_features = torch.cat((mask_features_view, ref_features_view), dim=1)
         context_features = torch.stack((phoneme_features, landmark_features), dim=1)
         
         output = self.attention(query_features, context_features)   #[2,8,32*32]
-        output = output.view(output.shape[0], 8, 32, 32)            #[2,8,32,32]
-        pred_features = self.postconv(output)                              #[2,4,32,32]     
-        pred_features = nn.Parameter(pred_features, requires_grad=True)   
-        
+        output = output.view(output.shape[0], 8 * 32 * 32)            #[2,8*32*32]
+        pred_features = self.linear(output)                              #[2,4*32*32]     
+
         return (phoneme_features, landmark_features, pred_features)
 
     def loss_fn(self, phoneme_features, landmark_features, pred_features, gt_features):
@@ -116,14 +119,14 @@ class Model(nn.Module):
         if (phoneme_features is not None) and (landmark_features is not None):
             logits_phoneme_landmark = logit_scale_pl * phoneme_features @ landmark_features.T
 
-        loss_pl = F.cross_entropy(
+        loss_pl = nn.CrossEntropyLoss()(
             logits_phoneme_landmark, reference
-        ) + F.cross_entropy(
+        ) + nn.CrossEntropyLoss()(
             logits_phoneme_landmark.transpose(-1, -2), reference
         )
         
         #L1 loss
-        mae_loss = F.l1_loss(pred_features, gt_features)
+        mae_loss = nn.MSELoss()(pred_features, gt_features)
         
         #Cosine Similarity loss
         pred_flat = pred_features.view(batch_size, -1)
@@ -138,13 +141,16 @@ class Model(nn.Module):
         
     def training_step_imp(self, batch, device) -> torch.Tensor:
         phoneme, landmark, mask, ref, visual_features, visual = batch
-
+        visual_features = visual_features.view(visual_features.shape[0], -1)
+        visual_features = visual_features.to(self.module.device)
+        
         (phoneme_features, landmark_features, pred_features) = self(
             phoneme = phoneme, 
             landmark = landmark,
             mask_features = mask,
             ref_features = ref
         )
+        
         loss = self.module.loss_fn(phoneme_features, landmark_features, pred_features, visual_features)
 
         return loss
@@ -152,13 +158,24 @@ class Model(nn.Module):
     def eval_step_imp(self, batch, device) -> Tuple[torch.Tensor, torch.Tensor]:
         with torch.no_grad():
             phoneme, landmark, mask, ref, visual_features, visual = batch
-
-            (phoneme_features, landmark_features, pred_features) = self(
+            visual_features = visual_features.view(visual_features.shape[0], -1)
+            visual_features = visual_features.to(self.module.device)
+            
+            (_, _, pred_features) = self(
                 phoneme = phoneme, 
                 landmark = landmark,
                 mask_features = mask,
                 ref_features = ref
             )
-        pred_features = pred_features.view(pred_features.shape[0], -1)
-        visual_features = visual_features.view(visual_features.shape[0], -1)
+        
+        # import json
+        # with open("./assets/pred_features.json", "w") as f:
+        #     json.dump(pred_features.tolist(), f)
+        # with open("./assets/gt_features.json", "w") as f:
+        #     json.dump(visual_features.tolist(), f)
+        # loss = nn.MSELoss()(pred_features, visual_features)
+        # with open("./assets/mse_loss.json", "w") as f:
+        #     json.dump(loss.item(), f)        
+        # print(visual_features.shape)
+        
         return {"y_pred": pred_features, "y": visual_features}

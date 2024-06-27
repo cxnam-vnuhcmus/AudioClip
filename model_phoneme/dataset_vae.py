@@ -7,11 +7,11 @@ from glob import glob
 import os
 import numpy as np
 import random
-import cv2
-import librosa
-from PIL import Image
+# import cv2
+# import librosa
+# from PIL import Image
 import torchvision.transforms as T
-from diffusers import AutoencoderKL
+# from diffusers import AutoencoderKL
 
 FACEMESH_LIPS = frozenset([(61, 146), (146, 91), (91, 181), (181, 84), (84, 17),
                            (17, 314), (314, 405), (405, 321), (321, 375),
@@ -100,8 +100,8 @@ class Dataset(td.Dataset):
             T.ToPILImage()
         ]) 
         
-        self.vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-ema")
-        self.vae = self.vae.to(self.device)
+        # self.vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-ema")
+        # self.vae = self.vae.to(self.device)
         
         
         filelists = []
@@ -119,7 +119,7 @@ class Dataset(td.Dataset):
                             frame_range = [frame_mid, frame_mid + 1, frame_mid - 1, frame_mid + 2, frame_mid - 2]
                             for frame_id in frame_range:
                                 lm_path = os.path.join(self.lm_dataroot, line, f'{frame_id:05d}.json')
-                                img_path = os.path.join(self.visual_dataroot, line, f'{frame_id:05d}.jpg')
+                                img_path = os.path.join(self.visual_dataroot, line, f'{frame_id:05d}.json')
                                 if os.path.exists(lm_path) and os.path.exists(img_path) and (os.path.getsize(img_path) != 0):
                                     filelists.append((phoneme['phoneme'],lm_path, img_path))
                                     break
@@ -139,12 +139,11 @@ class Dataset(td.Dataset):
         return device
         
     def __len__(self):
-        # return len(self.all_datas)
-        return 20
+        return len(self.all_datas)
+        # return 20
 
     def __getitem__(self, idx):
         (phoneme, lm_path, img_path) = self.all_datas[idx]
-        print(f">>>{img_path}")
         while 1:
             ref_idx = random.randrange(len(self.all_datas))
             _, _, ref_img_path = self.all_datas[ref_idx]
@@ -153,7 +152,7 @@ class Dataset(td.Dataset):
             if ref_folder_name != real_folder_name:
                 break
 
-        with open(lm_path, "r") as f:
+        with open(lm_path, "rt") as f:
             lm_data = json.load(f)
         lm_lip = []
         for i in FACEMESH_LIPS_IDX:
@@ -164,39 +163,21 @@ class Dataset(td.Dataset):
         mean = torch.tensor([0.5, 0.5])
         std = torch.tensor([0.5, 0.5])
         lm_lip = (lm_lip - mean) / std
-        lm_lip = lm_lip.to(self.device)
+        lm_lip = lm_lip
                 
-        gt_image = Image.open(img_path).convert('RGB')                 #[3,256,256]
-        image = self.transform(gt_image.copy())  
-        image = image.to(self.device)
-        image = image.unsqueeze(0)                                  #[1,3,256,256]
-        with torch.no_grad():
-            image_embedding = self.vae.encode(image).latent_dist.mean    #[1,4,32,32]
-        del image
+        with open(img_path, "rt") as f:
+            image_embedding = json.load(f)
+            image_embedding = torch.tensor(image_embedding)
 
-        mask_image = T.ToTensor()(gt_image.copy())        
-        mask = torch.ones_like(mask_image)  # (3,256,256)
-        mask[:, mask_image.shape[1]//2: , :] = 0        
-        mask_image = mask_image * mask
-        mask_image = T.ToPILImage()(mask_image)
-        mask_image = self.transform(mask_image)  
-        mask_image = mask_image.to(self.device)
-        mask_image = mask_image.unsqueeze(0)
-        with torch.no_grad():
-            mask_image_embedding = self.vae.encode(mask_image).latent_dist.sample()
-        del mask_image
+        mask = torch.ones_like(image_embedding)  # (3,256,256)
+        mask[:, :, image_embedding.shape[1]//2: , :] = 0        
+        mask_image_embedding = image_embedding * mask
         
-        ref_image = Image.open(ref_img_path).convert('RGB')
-        ref_image = self.transform(ref_image)  
-        ref_image = ref_image.to(self.device)
-        ref_image = ref_image.unsqueeze(0)
-        with torch.no_grad():
-            ref_image_embedding = self.vae.encode(ref_image).latent_dist.sample()
-        del ref_image
-        
-        gt_image = T.ToTensor()(gt_image).to(self.device)
-        
-        return phoneme, lm_lip, mask_image_embedding, ref_image_embedding, image_embedding, gt_image
+        with open(ref_img_path, "rt") as f:
+            ref_image_embedding = json.load(f)
+            ref_image_embedding = torch.tensor(ref_image_embedding)
+
+        return phoneme, lm_lip, mask_image_embedding, ref_image_embedding, image_embedding, None
 
     def collate_fn(self, batch):
         batch_phoneme, batch_lm, batch_mask_image_embedding, batch_ref_image_embedding, batch_image_embedding, batch_img = zip(*batch)
