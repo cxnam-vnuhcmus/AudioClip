@@ -15,7 +15,7 @@
     "args": {
       "img_dim": 32,
       "lm_dim": 128,
-      "pretrained": false,
+      "pretrained": "/home/anhldt/ai_learner/AudioClip/assets/checkpoints/checkpoint_100.pt",
       "infer_samples": true
     }
   },
