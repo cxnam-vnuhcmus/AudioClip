@@ -3,29 +3,22 @@ import torch.nn as nn
 from diffusers import AutoencoderKL
 
 class VisualEncoder(nn.Module):
-    def __init__(self, autoencoder_model: AutoencoderKL):
+    def __init__(self):
         super(VisualEncoder, self).__init__()
-        self.autoencoder = autoencoder_model
-
-        for param in self.autoencoder.encoder.parameters():
-            param.requires_grad = False
-        for param in self.autoencoder.mid_block.parameters():
-            param.requires_grad = False
-        for param in self.autoencoder.decoder.parameters():
-            param.requires_grad = True
+        self.vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-ema")
 
     def encode(self, x):
         with torch.no_grad():
-            latents = self.autoencoder.encode(x).latent_dist.sample()
+            latents = self.vae.encode(x).latent_dist.sample()
         return latents
     
     def decode(self, latents):
-        reconstructed = self.autoencoder.decode(latents).sample()
-        return reconstructed
+        reconstructed = self.vae.decode(latents)
+        return reconstructed.sample
     
     def forward(self, x):
         with torch.no_grad():
-            latents = self.autoencoder.encode(x).latent_dist.sample()
+            latents = self.vae.encode(x).latent_dist.sample()
 
-        reconstructed = self.autoencoder.decode(latents).sample()
-        return reconstructed
+        reconstructed = self.vae.decode(latents)
+        return reconstructed.sample

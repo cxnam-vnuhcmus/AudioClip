@@ -115,9 +115,6 @@ def run(experiment_name: str,
 
         model = torch.nn.DataParallel(model, device_ids=range(num_gpus))
         model = model.to(device)
-                        
-        for p in model.parameters():
-            p.requires_grad = True
 
         # add only enabled parameters to optimizer's list
         param_groups = [

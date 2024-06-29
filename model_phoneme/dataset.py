@@ -11,7 +11,6 @@ import cv2
 import librosa
 from PIL import Image
 import torchvision.transforms as T
-from diffusers import AutoencoderKL
 
 FACEMESH_LIPS = frozenset([(61, 146), (146, 91), (91, 181), (181, 84), (84, 17),
                            (17, 314), (314, 405), (405, 321), (321, 375),
@@ -99,11 +98,7 @@ class Dataset(td.Dataset):
             T.Normalize(mean=[-1.0, -1.0, -1.0], std=[1.0/0.5, 1.0/0.5, 1.0/0.5]),
             T.ToPILImage()
         ]) 
-        
-        self.vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-ema")
-        self.vae = self.vae.to(self.device)
-        
-        
+      
         filelists = []
         with open(self.datalist_root, 'r') as file:
             for line in file:
@@ -140,11 +135,11 @@ class Dataset(td.Dataset):
         
     def __len__(self):
         # return len(self.all_datas)
-        return 20
+        return 2
 
     def __getitem__(self, idx):
         (phoneme, lm_path, img_path) = self.all_datas[idx]
-        print(f">>>{img_path}")
+        
         while 1:
             ref_idx = random.randrange(len(self.all_datas))
             _, _, ref_img_path = self.all_datas[ref_idx]
@@ -166,40 +161,20 @@ class Dataset(td.Dataset):
         lm_lip = (lm_lip - mean) / std
         lm_lip = lm_lip.to(self.device)
                 
-        gt_image = Image.open(img_path).convert('RGB')                 #[3,256,256]
-        image = self.transform(gt_image.copy())  
-        image = image.to(self.device)
-        image = image.unsqueeze(0)                                  #[1,3,256,256]
-        with torch.no_grad():
-            image_embedding = self.vae.encode(image).latent_dist.mean    #[1,4,32,32]
-        del image
+        gt_image = self.preprocess_image(img_path)                #[3,256,256]
+        gt_image = torch.tensor(gt_image).unsqueeze(0)            #[1,3,256,256]
 
-        mask_image = T.ToTensor()(gt_image.copy())        
-        mask = torch.ones_like(mask_image)  # (3,256,256)
-        mask[:, mask_image.shape[1]//2: , :] = 0        
-        mask_image = mask_image * mask
-        mask_image = T.ToPILImage()(mask_image)
-        mask_image = self.transform(mask_image)  
-        mask_image = mask_image.to(self.device)
-        mask_image = mask_image.unsqueeze(0)
-        with torch.no_grad():
-            mask_image_embedding = self.vae.encode(mask_image).latent_dist.sample()
-        del mask_image
+        ref_image = self.preprocess_image(ref_img_path)             #[3,256,256]
+        ref_image = torch.tensor(ref_image).unsqueeze(0)            #[1,3,256,256]
+
+        mask = torch.ones_like(gt_image)  # (3,256,256)
+        mask[:, gt_image.shape[1]//2: , :] = 0        
+        mask_image = gt_image * mask
         
-        ref_image = Image.open(ref_img_path).convert('RGB')
-        ref_image = self.transform(ref_image)  
-        ref_image = ref_image.to(self.device)
-        ref_image = ref_image.unsqueeze(0)
-        with torch.no_grad():
-            ref_image_embedding = self.vae.encode(ref_image).latent_dist.sample()
-        del ref_image
-        
-        gt_image = T.ToTensor()(gt_image).to(self.device)
-        
-        return phoneme, lm_lip, mask_image_embedding, ref_image_embedding, image_embedding, gt_image
+        return phoneme, lm_lip, mask_image, ref_image, gt_image
 
     def collate_fn(self, batch):
-        batch_phoneme, batch_lm, batch_mask_image_embedding, batch_ref_image_embedding, batch_image_embedding, batch_img = zip(*batch)
+        batch_phoneme, batch_lm, batch_mask_image, batch_ref_image, batch_gt_imgage = zip(*batch)
         keep_ids = [idx for idx, (_, _) in enumerate(zip(batch_phoneme, batch_lm))]
 
         if not all(text is None for text in batch_phoneme):
@@ -213,28 +188,39 @@ class Dataset(td.Dataset):
         else:
             batch_lm = None
             
-        if not all(img is None for img in batch_mask_image_embedding):
-            batch_mask_image_embedding = [batch_mask_image_embedding[idx] for idx in keep_ids]
-            batch_mask_image_embedding = torch.cat(batch_mask_image_embedding, dim=0)
+        if not all(img is None for img in batch_mask_image):
+            batch_mask_image = [batch_mask_image[idx] for idx in keep_ids]
+            batch_mask_image = torch.cat(batch_mask_image, dim=0)
         else:
-            batch_mask_image_embedding = None
+            batch_mask_image = None
             
-        if not all(img is None for img in batch_ref_image_embedding):
-            batch_ref_image_embedding = [batch_ref_image_embedding[idx] for idx in keep_ids]
-            batch_ref_image_embedding = torch.cat(batch_ref_image_embedding, dim=0)
+        if not all(img is None for img in batch_ref_image):
+            batch_ref_image = [batch_ref_image[idx] for idx in keep_ids]
+            batch_ref_image = torch.cat(batch_ref_image, dim=0)
         else:
-            batch_ref_image_embedding = None
+            batch_ref_image = None
 
-        if not all(img is None for img in batch_image_embedding):
-            batch_image_embedding = [batch_image_embedding[idx] for idx in keep_ids]
-            batch_image_embedding = torch.cat(batch_image_embedding, dim=0)
+        if not all(img is None for img in batch_gt_imgage):
+            batch_gt_imgage = [batch_gt_imgage[idx] for idx in keep_ids]
+            batch_gt_imgage = torch.cat(batch_gt_imgage, dim=0)
         else:
-            batch_image_embedding = None
-            
-        if not all(img is None for img in batch_img):
-            batch_img = [batch_img[idx] for idx in keep_ids]
-            batch_img = torch.cat(batch_img, dim=0)
-        else:
-            batch_img = None
+            batch_gt_imgage = None
                         
-        return batch_phoneme, batch_lm, batch_mask_image_embedding, batch_ref_image_embedding, batch_image_embedding, batch_img
+        return batch_phoneme, batch_lm, batch_mask_image, batch_ref_image, batch_gt_imgage
+
+    def preprocess_image(self, image_path, target_size=(256, 256)):
+        # Read image using OpenCV
+        image = cv2.imread(image_path)
+        
+        # Resize image
+        image_resized = cv2.resize(image, target_size)
+        
+        # Convert from BGR to RGB (if needed)
+        image_resized = cv2.cvtColor(image_resized, cv2.COLOR_BGR2RGB)
+        
+        # Normalize image (assuming you want to normalize to [0, 1])
+        image_normalized = image_resized.astype(np.float32) / 255.0
+
+        image_normalized = image_normalized.transpose((2, 0, 1))
+        
+        return image_normalized

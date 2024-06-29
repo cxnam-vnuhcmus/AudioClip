@@ -105,3 +105,4 @@ dmypy.json
 **/*.pt
 **/*.0
 **/image_*.jpg
+**/tb_logs/
