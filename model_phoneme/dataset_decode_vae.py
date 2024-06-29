@@ -134,8 +134,8 @@ class Dataset(td.Dataset):
         return device
         
     def __len__(self):
-        # return len(self.all_datas)
-        return 2
+        return len(self.all_datas)
+        # return 20
 
     def __getitem__(self, idx):
         (phoneme, lm_path, img_path) = self.all_datas[idx]

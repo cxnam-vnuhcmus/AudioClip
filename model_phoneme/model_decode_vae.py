@@ -183,13 +183,13 @@ class Model(nn.Module):
                 ref = ref
             )
             
-            pred_features = pred_features.detach().cpu()
+            # pred_features = pred_features.detach().cpu()
             pred_features = pred_features.reshape((pred_features.shape[0], 4, 32, 32)) 
             
             with torch.no_grad():            
                 output = self.module.decode_visual(pred_features)
+                # output = output.detach().cpu()
                 for i in range(output.shape[0]):
-                    output = output[i]
-                    output = output * 255.0
-                    save_image(output, f'{save_folder}/image_{i:05d}.jpg')
+                    img = (output[i] + 1) / 2
+                    save_image(img, f'{save_folder}/image_{i:05d}.jpg')
             
