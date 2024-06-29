@@ -2,8 +2,8 @@
   "Setup": {
     "name": "ModelPhoneme",
     "suffix": "CV1",
-    "batch_train": 1,
-    "batch_test": 1,
+    "batch_train": 2,
+    "batch_test": 2,
     "workers_train": 0,
     "workers_test": 0,
     "epochs": 50,
@@ -11,11 +11,12 @@
     "saved_models_path": "./assets"
   },
   "Model": {
-    "class": "model_phoneme.model.Model",
+    "class": "model_phoneme.model_decode_vae.Model",
     "args": {
       "img_dim": 32,
       "lm_dim": 128,
-      "pretrained": false
+      "pretrained": false,
+      "infer_samples": false
     }
   },
   "Optimizer": {
