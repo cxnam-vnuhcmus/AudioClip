@@ -38,9 +38,11 @@ class Model(nn.Module):
         
         self.attention = CrossAttention(query_dim=self.img_dim * self.img_dim, context_dim=self.lm_dim)
 
-        self.linear = nn.Linear(8*32*32, 4*32*32)
+        self.linear = nn.Linear(8*self.img_dim*self.img_dim, 4*self.img_dim*self.img_dim)
         
         self.logit_scale_pl = torch.nn.Parameter(torch.log(torch.ones([]) * 100))
+        
+        self.logvar = nn.Parameter(torch.ones(size=()) * 1.0)
         
         self.perceptual_loss = LPIPS()
 
@@ -103,9 +105,9 @@ class Model(nn.Module):
         context_features = torch.stack((phoneme_features, landmark_features), dim=1)
         
         output_att = self.attention(query_features, context_features)   #[2,8,32*32]
-        output_att = output_att.view(output_att.shape[0], 8 * 32 * 32)            #[2,8*32*32]
+        output_att = output_att.view(output_att.shape[0], -1)            #[2,8*32*32]
         pred_features = self.linear(output_att)                              #[2,4*32*32] 
-        recons_features = pred_features.reshape((pred_features.shape[0], 4, 32, 32))    
+        recons_features = pred_features.reshape((pred_features.shape[0], -1, self.img_dim, self.img_dim))    
         
         reconstructed_images = self.decode_visual(recons_features)
 
@@ -148,28 +150,17 @@ class Model(nn.Module):
         
         # Reconstruction loss
         rec_loss = torch.abs(gt_images.contiguous() - reconstructed_images.contiguous())
-        
-        # Perceptual loss
         p_loss = self.perceptual_loss(gt_images.contiguous(), reconstructed_images.contiguous())
-
-        # Negative log-likelihood loss
-        mean1 = torch.mean(reconstructed_images, dim=[1, 2, 3], keepdim=True)
-        logvar1 = torch.log(torch.var(reconstructed_images, dim=[1, 2, 3], keepdim=True))
-        nll1 = self.nll(reconstructed_images, mean1, logvar1)
-
-        mean2 = torch.mean(gt_images, dim=[1, 2, 3], keepdim=True)
-        logvar2 = torch.log(torch.var(gt_images, dim=[1, 2, 3], keepdim=True))
-        nll2 = self.nll(gt_images, mean2, logvar2)
-        
-        nll_loss = nll1 - nll2
+        rec_loss = rec_loss + 1.0 * p_loss
+        nll_loss = rec_loss / torch.exp(self.logvar) + self.logvar
+        weighted_nll_loss = 1.0 * nll_loss
+        weighted_nll_loss = torch.sum(weighted_nll_loss) / weighted_nll_loss.shape[0]
 
         #Total loss
         loss = loss_pl * 0.1
         + mae_loss * 0.4 
         + cos_sim_loss * 0.2 
-        + rec_loss * 0.2
-        + p_loss * 0.2
-        + nll_loss * 0.2
+        + weighted_nll_loss * 0.4
 
         return loss
 

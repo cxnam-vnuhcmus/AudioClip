@@ -247,10 +247,10 @@ def run(experiment_name: str,
             print(f"Load checkpoint: {model_args['pretrained']}")
         
         # Events
-        if not skip_train_val:
-            @trainer.on(ieng.Events.STARTED)
-            def engine_started(engine: ieng.Engine):
-                log_validation(engine, False)
+        # if not skip_train_val:
+        #     @trainer.on(ieng.Events.STARTED)
+        #     def engine_started(engine: ieng.Engine):
+        #         log_validation(engine, False)
 
         @trainer.on(ieng.Events.EPOCH_STARTED)
         def reset_progress_iterations(engine: ieng.Engine):

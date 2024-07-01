@@ -13,7 +13,7 @@
   "Model": {
     "class": "model_phoneme.model_decode_vae.Model",
     "args": {
-      "img_dim": 32,
+      "img_dim": 16,
       "lm_dim": 128,
       "pretrained": false,
       "infer_samples": true
@@ -46,7 +46,7 @@
       "sample_rate": 22050,
       "n_mels": 80,
       "n_fft": 800,
-      "img_size": 256,
+      "img_size": 128,
       "training": {"key": "train", "yes": true, "no": false}
     }
   },

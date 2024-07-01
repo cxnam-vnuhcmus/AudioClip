@@ -124,9 +124,9 @@ class Dataset(td.Dataset):
 
         self.all_datas = []
         if self.train:
-            self.all_datas = filelists[:int(len(filelists) * 0.8)]
+            self.all_datas = filelists[:int(len(filelists) * 0.9)]
         else:
-            self.all_datas = filelists[int(len(filelists) * 0.8):]
+            self.all_datas = filelists[int(len(filelists) * 0.9):]
     
     @property
     def device(self):
@@ -135,7 +135,7 @@ class Dataset(td.Dataset):
         
     def __len__(self):
         return len(self.all_datas)
-        # return 2
+        # return 8
 
     def __getitem__(self, idx):
         (phoneme, lm_path, img_path) = self.all_datas[idx]
@@ -161,10 +161,10 @@ class Dataset(td.Dataset):
         lm_lip = (lm_lip - mean) / std
         lm_lip = lm_lip.to(self.device)
                 
-        gt_image = self.preprocess_image(img_path)                #[3,256,256]
+        gt_image = self.preprocess_image(img_path, target_size=(self.img_size, self.img_size))                #[3,256,256]
         gt_image = torch.tensor(gt_image).unsqueeze(0)            #[1,3,256,256]
 
-        ref_image = self.preprocess_image(ref_img_path)             #[3,256,256]
+        ref_image = self.preprocess_image(ref_img_path, target_size=(self.img_size, self.img_size))             #[3,256,256]
         ref_image = torch.tensor(ref_image).unsqueeze(0)            #[1,3,256,256]
 
         mask = torch.ones_like(gt_image)  # (3,256,256)

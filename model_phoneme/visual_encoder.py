@@ -9,8 +9,8 @@ class VisualEncoder(nn.Module):
 
     def encode(self, x):
         with torch.no_grad():
-            latents = self.vae.encode(x).latent_dist
-        return self.reparameterize(latents.mean, latents.logvar)
+            latents = self.vae.encode(x).latent_dist.sample()
+        return latents
     
     def decode(self, latents):
         reconstructed = self.vae.decode(latents)
@@ -20,8 +20,3 @@ class VisualEncoder(nn.Module):
         latents = self.encode(x)    
         reconstructed = self.decode(latents)
         return reconstructed
-    
-    def reparameterize(self, mean, logvar):
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-        return mean + eps * std
