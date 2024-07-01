@@ -12,10 +12,10 @@ from model_phoneme.phoneme_encoder import PhonemeEncoder
 from model_phoneme.landmark_encoder import LandmarkEncoder
 from model_phoneme.visual_encoder import VisualEncoder
 from model_phoneme.attention import CrossAttention
-from diffusers import AutoencoderKL
-from PIL import Image
-import torchvision.transforms as T
 from torchvision.utils import save_image
+from taming.modules.losses.lpips import LPIPS
+
+import numpy as np
 
 class Model(nn.Module):
 
@@ -41,10 +41,14 @@ class Model(nn.Module):
         self.linear = nn.Linear(8*32*32, 4*32*32)
         
         self.logit_scale_pl = torch.nn.Parameter(torch.log(torch.ones([]) * 100))
+        
+        self.perceptual_loss = LPIPS()
 
         for p in self.parameters():
             p.requires_grad = True
         for p in self.visual.vae.encoder.parameters():
+            p.requires_grad = False
+        for p in self.perceptual_loss.parameters():
             p.requires_grad = False
 
         # for name, param in self.named_parameters():
@@ -71,7 +75,7 @@ class Model(nn.Module):
 
     def decode_visual(self, latents: torch.Tensor) -> torch.Tensor:
         return self.visual.decode(latents)
-
+    
     def forward(self,
                 phoneme,
                 landmark,
@@ -98,13 +102,24 @@ class Model(nn.Module):
         query_features = torch.cat((mask_features_view, ref_features_view), dim=1)
         context_features = torch.stack((phoneme_features, landmark_features), dim=1)
         
-        output = self.attention(query_features, context_features)   #[2,8,32*32]
-        output = output.view(output.shape[0], 8 * 32 * 32)            #[2,8*32*32]
-        pred_features = self.linear(output)                              #[2,4*32*32]     
+        output_att = self.attention(query_features, context_features)   #[2,8,32*32]
+        output_att = output_att.view(output_att.shape[0], 8 * 32 * 32)            #[2,8*32*32]
+        pred_features = self.linear(output_att)                              #[2,4*32*32] 
+        recons_features = pred_features.reshape((pred_features.shape[0], 4, 32, 32))    
+        
+        reconstructed_images = self.decode_visual(recons_features)
 
-        return (phoneme_features, landmark_features, pred_features)
+        return (phoneme_features, landmark_features, pred_features, reconstructed_images)
 
-    def loss_fn(self, phoneme_features, landmark_features, pred_features, gt_features):
+    def nll(self, image, mean, logvar, dims=[1, 2, 3]):
+        logtwopi = np.log(2.0 * np.pi)
+        var = torch.exp(logvar)
+        return 0.5 * torch.sum(
+            logtwopi + logvar + torch.pow(image - mean, 2) / var,
+            dim=dims,
+        )
+        
+    def loss_fn(self, phoneme_features, landmark_features, pred_features, gt_features, reconstructed_images, gt_images):
         batch_size = phoneme_features.shape[0]
 
         #CLIP loss
@@ -125,14 +140,36 @@ class Model(nn.Module):
             logits_phoneme_landmark.transpose(-1, -2), reference
         )
         
-        #L1 loss
+        # L2 loss
         mae_loss = nn.MSELoss()(pred_features, gt_features)
     
-        #Cosine Similarity loss    
+        # Cosine Similarity loss    
         cos_sim_loss = 1 - F.cosine_similarity(pred_features, gt_features, dim=1).mean()
         
+        # Reconstruction loss
+        rec_loss = torch.abs(gt_images.contiguous() - reconstructed_images.contiguous())
+        
+        # Perceptual loss
+        p_loss = self.perceptual_loss(gt_images.contiguous(), reconstructed_images.contiguous())
+
+        # Negative log-likelihood loss
+        mean1 = torch.mean(reconstructed_images, dim=[1, 2, 3], keepdim=True)
+        logvar1 = torch.log(torch.var(reconstructed_images, dim=[1, 2, 3], keepdim=True))
+        nll1 = self.nll(reconstructed_images, mean1, logvar1)
+
+        mean2 = torch.mean(gt_images, dim=[1, 2, 3], keepdim=True)
+        logvar2 = torch.log(torch.var(gt_images, dim=[1, 2, 3], keepdim=True))
+        nll2 = self.nll(gt_images, mean2, logvar2)
+        
+        nll_loss = nll1 - nll2
+
         #Total loss
-        loss = loss_pl * 0.2 + mae_loss * 0.4 + cos_sim_loss * 0.4
+        loss = loss_pl * 0.1
+        + mae_loss * 0.4 
+        + cos_sim_loss * 0.2 
+        + rec_loss * 0.2
+        + p_loss * 0.2
+        + nll_loss * 0.2
 
         return loss
 
@@ -140,18 +177,18 @@ class Model(nn.Module):
     def training_step_imp(self, batch, device) -> torch.Tensor:
         phoneme, landmark, mask, ref, gt = batch
 
-        (phoneme_features, landmark_features, pred_features) = self(
+        (phoneme_features, landmark_features, pred_features, reconstructed_images) = self(
             phoneme = phoneme, 
             landmark = landmark,
             mask = mask,
             ref = ref
         )
-
+        
         visual_features = self.module.encode_visual(gt)
-
         visual_features = visual_features.reshape((visual_features.shape[0], -1))
 
-        loss = self.module.loss_fn(phoneme_features, landmark_features, pred_features, visual_features)
+        gt = gt.to(self.module.device)
+        loss = self.module.loss_fn(phoneme_features, landmark_features, pred_features, visual_features, reconstructed_images, gt)
 
         return loss
 
@@ -159,7 +196,7 @@ class Model(nn.Module):
         with torch.no_grad():
             phoneme, landmark, mask, ref, gt = batch
             
-            (_, _, pred_features) = self(
+            (_, _, pred_features, _) = self(
                 phoneme = phoneme, 
                 landmark = landmark,
                 mask = mask,
@@ -167,7 +204,6 @@ class Model(nn.Module):
             )
 
             visual_features = self.module.encode_visual(gt)
-
             visual_features = visual_features.reshape((visual_features.shape[0], -1))
         
         return {"y_pred": pred_features, "y": visual_features}
@@ -176,20 +212,14 @@ class Model(nn.Module):
         with torch.no_grad():
             phoneme, landmark, mask, ref, gt = batch
             
-            (_, _, pred_features) = self(
+            (_, _, _, reconstructed_images) = self(
                 phoneme = phoneme, 
                 landmark = landmark,
                 mask = mask,
                 ref = ref
             )
             
-            # pred_features = pred_features.detach().cpu()
-            pred_features = pred_features.reshape((pred_features.shape[0], 4, 32, 32)) 
-            
-            with torch.no_grad():            
-                output = self.module.decode_visual(pred_features)
-                # output = output.detach().cpu()
-                for i in range(output.shape[0]):
-                    img = (output[i] + 1) / 2
-                    save_image(img, f'{save_folder}/image_{i:05d}.jpg')
+            for i in range(reconstructed_images.shape[0]):
+                img = (reconstructed_images[i] + 1) / 2
+                save_image(img, f'{save_folder}/image_{i:05d}.jpg')
             
