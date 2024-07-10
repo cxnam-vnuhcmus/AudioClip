@@ -116,74 +116,71 @@ class Dataset(td.Dataset):
         ]) 
         
         filelists = []
-        with open(self.datalist_root, 'r') as file:
-            for line in file:
-                line = line.strip()
-                #audio
-                audio_name = os.path.join(self.audio_dataroot, f'{line}.wav')
-                # audio_name = "/data/anhldt/ai/MEAD/M003/audios/front_angry_level_1/001.wav"
-                audio_data, _ = librosa.load(audio_name, sr=self.sr)
-                mel_spectrogram = librosa.feature.melspectrogram(y=audio_data, sr=self.sr, n_mels=self.n_mels)
-                mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
-                total_frame = mel_spectrogram_db.shape[1]
-                second = len(audio_data) // self.sr
-                # start_sample = int(1.4 * total_frame / second)
-                # end_sample = int(1.74 * total_frame / second)
-                # trimmed_mel = mel_spectrogram_db[:,start_sample-1:end_sample+1]
-                
-                # mel_spectrogram_power = librosa.db_to_power(trimmed_mel)
-                # spectrogram = librosa.feature.inverse.mel_to_stft(mel_spectrogram_power, sr=self.sr)
-                # reconstructed_audio = librosa.griffinlim(spectrogram)
-                # max_val = np.max(np.abs(reconstructed_audio))
-                # if max_val > 0:
-                #     normalized_audio = reconstructed_audio / max_val
-                # else:
-                #     normalized_audio = reconstructed_audio
-                # import soundfile as sf
-                # sf.write(f"./assets/trimmed_audio.wav", normalized_audio, self.sr)
-                
-                #emotion
-                emotion_label = line.split('_')[1]
-                
-                #phoneme
-                txt_name = os.path.join(self.transcript_dataroot, f'{line}.json')
-                with open(txt_name, "r") as f:
-                    data = json.load(f)
-                    for word in data['words']:
-                        for phoneme in word['phonemes']:
-                            #audio
-                            start_sample = int(phoneme["start"]  * total_frame / second)
-                            end_sample = int(phoneme["end"] * total_frame / second)
-                            trimmed_mel = mel_spectrogram_db[:,start_sample-1:end_sample+1]
-                            
-                            #frame
-                            frame_start = int(phoneme["start"] * self.fps)
-                            frame_end = int(phoneme["end"] * self.fps)
-                            num_indices = frame_end - frame_start + 1
-                            num_to_select = min(5, num_indices)
-                            all_indices = list(range(frame_start, frame_end + 1))
-                            if num_to_select >= num_indices:
-                                selected_indices = all_indices
-                            else:
-                                selected_indices = random.sample(all_indices, num_to_select)
-                            
-                            # frame_mid = int((frame_start + frame_end)/2)
-                            # frame_range = [frame_mid, frame_mid + 1, frame_mid - 1, frame_mid + 2, frame_mid - 2]
-                            for frame_id in selected_indices:
-                                lm_path = os.path.join(self.lm_dataroot, line, f'{frame_id:05d}.json')
-                                img_path = os.path.join(self.visual_dataroot, line, f'{frame_id:05d}.jpg')
-                                if os.path.exists(lm_path) and os.path.exists(img_path) and (os.path.getsize(img_path) != 0):
-                                    filelists.append((phoneme['phoneme'], trimmed_mel, img_path, emotion_label))
-                                    # break
+        if os.path.isdir(self.datalist_root):
+            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.datalist_root))][:5]
+            data_path = os.path.join(self.datalist_root,'{p}.txt')
+        else:
+            persons, _ = os.path.splitext(os.path.basename(self.datalist_root))   
+            persons = [persons] 
+            data_path = self.datalist_root
+        
+        for p in tqdm(persons, total=len(persons)):
+            audio_p = self.audio_dataroot.format(p=p)
+            visual_p = self.visual_dataroot.format(p=p)
+            lm_p = self.lm_dataroot.format(p=p)
+            transcript_p = self.transcript_dataroot.format(p=p)
+            data_path_p = data_path.format(p=p)
+            with open(data_path_p, 'r') as file:
+                for line in file:
+                    line = line.strip()
+                    #audio
+                    audio_name = os.path.join(audio_p, f'{line}.wav')
+                    audio_data, _ = librosa.load(audio_name, sr=self.sr)
+                    mel_spectrogram = librosa.feature.melspectrogram(y=audio_data, sr=self.sr, n_mels=self.n_mels)
+                    mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
+                    total_frame = mel_spectrogram_db.shape[1]
+                    second = len(audio_data) // self.sr
+                    if second < 0.5:
+                        continue
+                    #emotion
+                    emotion_label = line.split('_')[1]
+                    
+                    #phoneme
+                    txt_name = os.path.join(transcript_p, f'{line}.json')
+                    with open(txt_name, "r") as f:
+                        data = json.load(f)
+                        for word in data['words']:
+                            for phoneme in word['phonemes']:
+                                #audio
+                                start_sample = int(phoneme["start"]  * total_frame / second)
+                                end_sample = int(phoneme["end"] * total_frame / second)
+                                trimmed_mel = mel_spectrogram_db[:,start_sample-1:end_sample+1]
+
+                                #frame
+                                frame_start = int(phoneme["start"] * self.fps)
+                                frame_end = int(phoneme["end"] * self.fps)
+                                num_indices = frame_end - frame_start + 1
+                                num_to_select = min(5, num_indices)
+                                all_indices = list(range(frame_start, frame_end + 1))
+                                if num_to_select >= num_indices:
+                                    selected_indices = all_indices
+                                else:
+                                    selected_indices = random.sample(all_indices, num_to_select)
+                                
+                                for frame_id in selected_indices:
+                                    lm_path = os.path.join(lm_p, line, f'{frame_id:05d}.json')
+                                    img_path = os.path.join(visual_p, line, f'{frame_id:05d}.jpg')
+                                    if os.path.exists(lm_path) and os.path.exists(img_path) and (os.path.getsize(img_path) != 0):
+                                        filelists.append((phoneme['phoneme'], trimmed_mel, img_path, emotion_label))
         
         random.seed(0)
         random.shuffle(filelists)
 
         self.all_datas = []
         if self.train:
-            self.all_datas = filelists[:int(len(filelists) * 0.8)]
+            self.all_datas = filelists[:int(len(filelists) * 0.9)]
         else:
-            self.all_datas = filelists[int(len(filelists) * 0.8):]
+            self.all_datas = filelists[int(len(filelists) * 0.9):]
     
     @property
     def device(self):
@@ -198,10 +195,12 @@ class Dataset(td.Dataset):
         (phoneme, mel_spectrogram, img_path, emotion_label) = self.all_datas[idx]
         
         #audio
-        padded_spectrogram = np.zeros((self.n_mels, self.n_mels))
         mel_shape = mel_spectrogram.shape
-        start_pos_overlay = self.n_mels//2 - mel_shape[1]//2
-        padded_spectrogram[:, start_pos_overlay : start_pos_overlay + mel_shape[1]] = mel_spectrogram
+        max_dim = max(self.n_mels, mel_shape[1])
+        padded_spectrogram = np.zeros((max_dim, max_dim))
+        start_x_pos_overlay = max_dim//2 - mel_shape[0]//2
+        start_y_pos_overlay = max_dim//2 - mel_shape[1]//2
+        padded_spectrogram[start_x_pos_overlay:(start_x_pos_overlay + mel_shape[0]), start_y_pos_overlay : (start_y_pos_overlay + mel_shape[1])] = mel_spectrogram
         padded_spectrogram = torch.tensor(padded_spectrogram)
         mel_spectrogram = (mel_spectrogram * 255).astype(np.uint8)
         image_mel = Image.fromarray(mel_spectrogram).convert("RGB")

@@ -16,7 +16,7 @@
       "img_dim": 16,
       "lm_dim": 128,
       "pretrained": "/home/anhldt/ai_learner/AudioClip/assets/checkpoints/checkpoint_100_attn_mfcc.pt",
-      "infer_samples": false
+      "infer_samples": "/home/anhldt/ai_learner/AudioClip/assets/samples_more_data"
     }
   },
   "Optimizer": {
@@ -37,15 +37,15 @@
   "Dataset": {
     "class": "model_attn.dataset.Dataset",
     "args": {
-      "datalist_root": "./assets/data.txt",
-      "audio_dataroot": "/data/anhldt/ai/MEAD/M003/audios",
-      "visual_dataroot": "/data/anhldt/ai/MEAD/M003/images",
-      "lm_dataroot": "/data/anhldt/ai/MEAD/M003/face_meshes",
-      "transcript_dataroot": "/data/anhldt/ai/MEAD/M003/transcripts",
+      "datalist_root": "./assets/datas",
+      "audio_dataroot": "/data/anhldt/ai/MEAD/{p}/audios",
+      "visual_dataroot": "/data/anhldt/ai/MEAD/{p}/images",
+      "lm_dataroot": "/data/anhldt/ai/MEAD/{p}/face_meshes",
+      "transcript_dataroot": "/data/anhldt/ai/MEAD/{p}/transcripts",
       "fps": 25,
       "sample_rate": 22050,
-      "n_mels": 40,
-      "n_fft": 128,
+      "n_mels": 80,
+      "n_fft": 800,
       "img_size": 224,
       "training": {"key": "train", "yes": true, "no": false}
     }
