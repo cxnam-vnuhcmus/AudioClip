@@ -1,9 +1,9 @@
 {
   "Setup": {
-    "name": "ModelPhoneme",
+    "name": "Model_Attn",
     "suffix": "CV1",
-    "batch_train": 12,
-    "batch_test": 12,
+    "batch_train": 32,
+    "batch_test": 32,
     "workers_train": 0,
     "workers_test": 0,
     "epochs": 100,
@@ -11,12 +11,12 @@
     "saved_models_path": "./assets"
   },
   "Model": {
-    "class": "model_phoneme.model_decode_vae.Model",
+    "class": "model_attn.model.Model",
     "args": {
       "img_dim": 16,
       "lm_dim": 128,
-      "pretrained": "./assets/checkpoints/checkpoint_14.pt",
-      "infer_samples": true
+      "pretrained": "/home/anhldt/ai_learner/AudioClip/assets/checkpoints/checkpoint_100_attn_mfcc.pt",
+      "infer_samples": false
     }
   },
   "Optimizer": {
@@ -35,18 +35,18 @@
     }
   },
   "Dataset": {
-    "class": "model_phoneme.dataset_decode_vae.Dataset",
+    "class": "model_attn.dataset.Dataset",
     "args": {
       "datalist_root": "./assets/data.txt",
-      "audio_dataroot": "",
+      "audio_dataroot": "/data/anhldt/ai/MEAD/M003/audios",
       "visual_dataroot": "/data/anhldt/ai/MEAD/M003/images",
       "lm_dataroot": "/data/anhldt/ai/MEAD/M003/face_meshes",
       "transcript_dataroot": "/data/anhldt/ai/MEAD/M003/transcripts",
       "fps": 25,
       "sample_rate": 22050,
-      "n_mels": 80,
-      "n_fft": 800,
-      "img_size": 128,
+      "n_mels": 40,
+      "n_fft": 128,
+      "img_size": 224,
       "training": {"key": "train", "yes": true, "no": false}
     }
   },
@@ -92,19 +92,13 @@
     }
   ],
   "Metrics": [
+      
       {
-          "label": "MSE",
-          "class": "ignite.metrics.MeanSquaredError",
-          "args": {"output_transform": ["y_pred", "y"]},
+          "label": "ACC",
+          "class": "ignite.metrics.Accuracy",
+          "args": {"output_transform": ["y_pred", "y_indices"]},
           "use_for": ["val","test"],
           "save_checkpoint": true
-      },
-      {
-          "label": "CustomMetric",
-          "class": "model_phoneme.loss.CustomMetric",
-          "args": {"output_transform": ["y_pred", "y"]},
-          "use_for": ["val","test"],
-          "save_checkpoint": false
       }
   ]
 }

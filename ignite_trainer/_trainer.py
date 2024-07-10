@@ -189,8 +189,16 @@ def run(experiment_name: str,
         def eval_step(engine: ieng.Engine, batch) -> _interfaces.TensorPair:
             model.eval()
             
-            if model_args['infer_samples'] and ((engine.state.iteration - 1) % len(train_loader)) == 0:
-                save_folder = f"{saved_models_path}/samples"
+            default_samples_path = f"{saved_models_path}/samples"
+            is_infer_samples = False
+            if isinstance(model_args['infer_samples'],str):
+                default_samples_path = model_args['infer_samples']
+                is_infer_samples = True
+            elif isinstance(model_args['infer_samples'],bool):
+                is_infer_samples = model_args['infer_samples']
+            
+            if is_infer_samples and ((engine.state.iteration - 1) % len(train_loader)) == 0:
+                save_folder = default_samples_path
                 os.makedirs(save_folder, exist_ok=True)
                 Network.inference(model, batch, device, save_folder)
                 return Network.eval_step_imp(model, batch, device)
@@ -230,7 +238,7 @@ def run(experiment_name: str,
         
         #Save checkpoints
         handler = Checkpoint(
-            {'model': model, 'optimizer': optimizer},
+            {'model': model, 'optimizer': optimizer, 'trainer': trainer},
             DiskSaver(f'{saved_models_path}/checkpoints', create_dir=True, require_empty=False),
             n_saved=2,  # Số lượng checkpoint cần lưu
             global_step_transform=lambda e, _: e.state.epoch  # Sử dụng số epoch làm global step
@@ -242,15 +250,16 @@ def run(experiment_name: str,
             checkpoint = torch.load(model_args['pretrained'])
             Checkpoint.load_objects(to_load={
                 'model': model,
-                'optimizer': optimizer
+                'optimizer': optimizer,
+                'trainer': trainer
             }, checkpoint=checkpoint)
             print(f"Load checkpoint: {model_args['pretrained']}")
         
         # Events
-        # if not skip_train_val:
-        #     @trainer.on(ieng.Events.STARTED)
-        #     def engine_started(engine: ieng.Engine):
-        #         log_validation(engine, False)
+        if not skip_train_val:
+            @trainer.on(ieng.Events.STARTED)
+            def engine_started(engine: ieng.Engine):
+                log_validation(engine, False)
 
         @trainer.on(ieng.Events.EPOCH_STARTED)
         def reset_progress_iterations(engine: ieng.Engine):

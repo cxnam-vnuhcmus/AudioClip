@@ -9,12 +9,16 @@ class VisualEncoder(nn.Module):
 
     def encode(self, x):
         with torch.no_grad():
-            latents = self.vae.encode(x).latent_dist.sample()
+            latents = self.vae.encode(x).latent_dist.mean
+            latents = latents * 0.18215
         return latents
     
     def decode(self, latents):
-        reconstructed = self.vae.decode(latents)
-        return reconstructed.sample
+        with torch.no_grad():
+            latents = 1 / 0.18215 * latents
+            reconstructed = self.vae.decode(latents).sample
+            reconstructed = (reconstructed / 2 + 0.5).clamp(0, 1)
+        return reconstructed
     
     def forward(self, x):
         latents = self.encode(x)    
