@@ -151,13 +151,9 @@ class Dataset(td.Dataset):
             transcript_p = self.transcript_dataroot.format(p=p)
             
             #audio
-            audio_name = os.path.join(audio_p, f'{line}.wav')
-            audio_data, _ = librosa.load(audio_name, sr=self.sr)
-            mel_spectrogram = librosa.feature.melspectrogram(y=audio_data, sr=self.sr, n_mels=self.n_mels)
-            mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
-            total_frame = mel_spectrogram_db.shape[1]
-            second = len(audio_data) // self.sr
-            if second < 0.5: continue
+            audio_path = os.path.join(audio_p, f'{line}.wav')
+            if (os.path.getsize(audio_path) == 0): continue
+            if (librosa.get_duration(filename=audio_path) < 1.0): continue
             
             #emotion
             emotion_label = line.split('_')[1]
@@ -168,16 +164,12 @@ class Dataset(td.Dataset):
                 data = json.load(f)
                 for word in data['words']:
                     for phoneme in word['phonemes']:
-                        text = phoneme["phoneme"]
-                        start = phoneme["start"]
-                        end = phoneme["end"]
+                        phoneme_text = phoneme["phoneme"]
+                        phoneme_start = phoneme["start"]
+                        phoneme_end = phoneme["end"]
                         
-                        start_sample = int(start  * total_frame / second)
-                        end_sample = int(end * total_frame / second)
-                        trimmed_mel = mel_spectrogram_db[:,start_sample-1:end_sample+1]
-                        
-                        frame_start = int(start * self.fps)
-                        frame_end = int(end * self.fps)
+                        frame_start = int(phoneme_start * self.fps)
+                        frame_end = int(phoneme_end * self.fps)
                         num_indices = frame_end - frame_start + 1
                         num_to_select = min(5, num_indices)
                         all_indices = list(range(frame_start, frame_end + 1))
@@ -190,8 +182,7 @@ class Dataset(td.Dataset):
                             lm_path = os.path.join(lm_p, line, f'{frame_id:05d}.json')
                             img_path = os.path.join(visual_p, line, f'{frame_id:05d}.jpg')
                             if os.path.exists(lm_path) and os.path.exists(img_path) and (os.path.getsize(img_path) != 0):
-                                # all_datas.append(f"{p}\t{line}\t{text}\t{start}\t{end}\t{img_path}")
-                                all_datas.append((text, trimmed_mel, img_path, emotion_label))
+                                all_datas.append((phoneme_text, phoneme_start, phoneme_end, audio_path, img_path, emotion_label))
         return all_datas
         
     @property
@@ -204,9 +195,18 @@ class Dataset(td.Dataset):
         # return 8
 
     def __getitem__(self, idx):        
-        phoneme, trimmed_mel, img_path, emotion_label = self.all_datas[idx]#.strip().split("\t")
+        phoneme, phoneme_start, phoneme_end, audio_path, img_path, emotion_label = self.all_datas[idx]
         
         #audio
+        audio_data, _ = librosa.load(audio_path, sr=self.sr)
+        mel_spectrogram = librosa.feature.melspectrogram(y=audio_data, sr=self.sr, n_mels=self.n_mels)
+        mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
+        total_frame = mel_spectrogram_db.shape[1]
+        second = len(audio_data) // self.sr
+        start_sample = int(phoneme_start  * total_frame / second)
+        end_sample = int(phoneme_end * total_frame / second)
+        trimmed_mel = mel_spectrogram_db[:,start_sample-1:end_sample+1]
+
         mel_shape = trimmed_mel.shape
         max_dim = max(self.n_mels, mel_shape[1])
         padded_spectrogram = np.zeros((max_dim, max_dim))
