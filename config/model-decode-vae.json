@@ -15,8 +15,8 @@
     "args": {
       "img_dim": 16,
       "lm_dim": 128,
-      "pretrained": "./assets/checkpoints/checkpoint_14.pt",
-      "infer_samples": true
+      "pretrained": false,
+      "infer_samples": "./assets/samples_decode_vae"
     }
   },
   "Optimizer": {

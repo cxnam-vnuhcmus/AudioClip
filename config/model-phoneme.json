@@ -15,8 +15,8 @@
     "args": {
       "img_dim": 32,
       "lm_dim": 128,
-      "pretrained": false,
-      "infer_samples": false
+      "pretrained": "/home/anhldt/ai_learner/AudioClip/assets/checkpoints/checkpoint_1_100.pt",
+      "infer_samples": "/home/anhldt/ai_learner/AudioClip/assets/samples_phoneme"
     }
   },
   "Optimizer": {
@@ -35,13 +35,13 @@
     }
   },
   "Dataset": {
-    "class": "model_phoneme.dataset.Dataset",
+    "class": "model_phoneme.dataset_vae.Dataset",
     "args": {
       "datalist_root": "./assets/data.txt",
       "audio_dataroot": "",
-      "visual_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/images",
-      "lm_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/face_meshes",
-      "transcript_dataroot": "/home/cxnam/Documents/MyWorkingSpace/MEAD/M003/Features/transcripts",
+      "visual_dataroot": "/data/anhldt/ai/MEAD/M003/image_features",
+      "lm_dataroot": "/data/anhldt/ai/MEAD/M003/face_meshes",
+      "transcript_dataroot": "/data/anhldt/ai/MEAD/M003/transcripts",
       "fps": 25,
       "sample_rate": 22050,
       "n_mels": 80,
