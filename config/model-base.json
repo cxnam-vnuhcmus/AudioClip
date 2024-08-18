@@ -15,7 +15,7 @@
     "args": {
       "audio_dim": 80,
       "lm_dim": 262,
-      "pretrained": false,
+      "pretrained": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/checkpoints/cp_20_base.pt",
       "infer_samples": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/samples_base"
     }
   },

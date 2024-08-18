@@ -1,7 +1,7 @@
 {
   "Setup": {
-    "name": "Model_Trans_APL",
-    "suffix": "CV2",
+    "name": "Model_APL_SpeechSyncNet",
+    "suffix": "CV1",
     "batch_train": 32,
     "batch_test": 32,
     "workers_train": 10,
@@ -11,12 +11,12 @@
     "saved_models_path": "./assets"
   },
   "Model": {
-    "class": "model_apl.model.Model",
+    "class": "model_apl_speechsyncnet.model.Model",
     "args": {
       "audio_dim": 80,
       "lm_dim": 262,
-      "pretrained": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/checkpoints/cp_20_audio_trans_scaledot_lm_trans.pt",
-      "infer_samples": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/samples_cp_20_audio_trans_scaledot_lm_trans"
+      "pretrained": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/checkpoints/cp_20_apl_speechsyncnet.pt",
+      "infer_samples": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/samples_apl_speechsyncnet"
     }
   },
   "Optimizer": {
@@ -32,7 +32,7 @@
     }
   },
   "Dataset": {
-    "class": "model_apl.dataset.Dataset",
+    "class": "model_apl_speechsyncnet.dataset.Dataset",
     "args": {
       "datalist_root": "./assets/datas/M003.txt",
       "audio_dataroot": "/home/cxnam/Documents/MEAD/{p}/audios",
@@ -109,7 +109,7 @@
     },
       {
           "label": "Custom",
-          "class": "model_apl.loss.CustomMetric",
+          "class": "model_apl_speechsyncnet.loss.CustomMetric",
           "args": {"output_transform": ["y_pred", "y"]},
           "use_for": ["val","test"],
           "save_checkpoint": false

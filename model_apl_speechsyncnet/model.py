@@ -3,9 +3,9 @@ from torch import nn
 
 from typing import Union
 
-from model_apl.audio_encoder import AudioEncoder
-from model_apl.landmark_encoder import LandmarkEncoder
-from model_apl.landmark_decoder import LandmarkDecoder
+from model_apl_speechsyncnet.audio_encoder import AudioEncoder
+from model_apl_speechsyncnet.landmark_encoder import LandmarkEncoder
+from model_apl_speechsyncnet.landmark_decoder import LandmarkDecoder
 
 import cv2
 import numpy as np
@@ -80,7 +80,7 @@ class Model(nn.Module):
         self.lm_dim = lm_dim
         
         self.audio = AudioEncoder(dim_in=self.audio_dim)
-        self.landmark = LandmarkEncoder(input_dim=self.lm_dim, hidden_dim=128, output_dim=128, num_heads=8, num_layers=3)
+        self.landmark = LandmarkEncoder(input_size=(131, 2), output_size=128, hidden_size=256)
         self.decoder = LandmarkDecoder(output_dim=self.lm_dim)
         
         self.criterion = CustomLoss(alpha=1.0, beta=0.5, gamma=0.5)
@@ -92,7 +92,7 @@ class Model(nn.Module):
         return device
     
     def encode_audio(self, audio: torch.Tensor) -> torch.Tensor:
-        audio_embedding, _ = self.audio(audio.to(device=self.device, dtype=torch.float32))
+        audio_embedding,_ = self.audio(audio.to(device=self.device, dtype=torch.float32))
         return audio_embedding
     
     def encode_landmark(self, landmarks: torch.Tensor) -> torch.Tensor:
@@ -186,4 +186,4 @@ class Model(nn.Module):
                 plt.savefig(output_file, bbox_inches='tight')
                 plt.close()
                 
-#Eval. results - Epoch: 0; MAE: 1.8048; MSE: 0.0448; Custom: [M-LD: 3.0778;M-LV: 3.0778;F-LD: 2.8090;F-LV: 3.4509]             
+#Eval. results - Epoch: 20; MAE: 2.8959; MSE: 0.2578; Custom: [M-LD: 4.3182;M-LV: 4.3182;F-LD: 4.5771;F-LV: 6.9013]

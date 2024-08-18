@@ -185,3 +185,5 @@ class Model(nn.Module):
                 plt.axis('off')
                 plt.savefig(output_file, bbox_inches='tight')
                 plt.close()
+                
+#Eval. results - Epoch: 20; MAE: 1.5070; MSE: 0.0272; Custom: [M-LD: 2.5159;M-LV: 2.5159;F-LD: 2.3357;F-LV: 3.0868]

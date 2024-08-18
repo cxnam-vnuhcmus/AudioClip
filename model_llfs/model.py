@@ -3,9 +3,9 @@ from torch import nn
 
 from typing import Union
 
-from model_apl.audio_encoder import AudioEncoder
-from model_apl.landmark_encoder import LandmarkEncoder
-from model_apl.landmark_decoder import LandmarkDecoder
+from model_llfs.audio_encoder import AudioEncoder
+from model_llfs.landmark_encoder import LandmarkEncoder
+from model_llfs.landmark_decoder import LandmarkDecoder
 
 import cv2
 import numpy as np
@@ -92,7 +92,7 @@ class Model(nn.Module):
         return device
     
     def encode_audio(self, audio: torch.Tensor) -> torch.Tensor:
-        audio_embedding, _ = self.audio(audio.to(device=self.device, dtype=torch.float32))
+        audio_embedding = self.audio(audio.to(device=self.device, dtype=torch.float32))
         return audio_embedding
     
     def encode_landmark(self, landmarks: torch.Tensor) -> torch.Tensor:
@@ -186,4 +186,4 @@ class Model(nn.Module):
                 plt.savefig(output_file, bbox_inches='tight')
                 plt.close()
                 
-#Eval. results - Epoch: 0; MAE: 1.8048; MSE: 0.0448; Custom: [M-LD: 3.0778;M-LV: 3.0778;F-LD: 2.8090;F-LV: 3.4509]             
+#Eval. results - Epoch: 0; MAE: 2.1755; MSE: 0.0429; Custom: [M-LD: 3.6742;M-LV: 3.6742;F-LD: 3.3808;F-LV: 3.2613]             
