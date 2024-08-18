@@ -107,3 +107,4 @@ dmypy.json
 **/image_*.jpg
 **/tb_logs/
 **/*.pth
+**/landmarks_*.png

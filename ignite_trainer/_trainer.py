@@ -316,11 +316,10 @@ def run(experiment_name: str,
             ]
             
             for metric_detail in performance_metrics:
-                if train and "val" in metric_detail["use_for"]:
-                    metric_label = metric_detail["label"]
-                    tqdm_info.append('{}: {:.4f}'.format(metric_label, validator.state.metrics[metric_label]))
-                elif not train and "test" in metric_detail["use_for"]:
-                    metric_label = metric_detail["label"]
+                metric_label = metric_detail["label"]
+                if isinstance(validator.state.metrics[metric_label], str):
+                    tqdm_info.append('{}: {}'.format(metric_label, validator.state.metrics[metric_label]))
+                else:
                     tqdm_info.append('{}: {:.4f}'.format(metric_label, validator.state.metrics[metric_label]))
             
             tqdm.tqdm.write('{} results - {}'.format(run_type, '; '.join(tqdm_info)))
@@ -338,7 +337,7 @@ def run(experiment_name: str,
 
             if scheduler is not None:
                 scheduler.step(engine.state.epoch)
-
+        
         trainer.run(train_loader, max_epochs=epochs)
 
         del train_loader
@@ -369,6 +368,7 @@ def main():
         parser.add_argument('-s', '--suffix', type=str, required=False)
         parser.add_argument('-S', '--skip-train-val', action='store_true', default=False)
         parser.add_argument('-V', '--visdom', action='store_true', default=False)
+        parser.add_argument('-T', '--test_only', action='store_true', default=False)
 
         args, unknown_args = parser.parse_known_args()
 
@@ -540,7 +540,7 @@ def main():
                 model_suffix=config['Setup']['suffix'],
                 setup_suffix=args.suffix,
                 orig_stdout=orig_stdout,
-                skip_train_val=args.skip_train_val,
+                skip_train_val=args.skip_train_val
             )
 
         prog_bar_exps.close()
