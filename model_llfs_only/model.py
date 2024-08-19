@@ -3,9 +3,9 @@ from torch import nn
 
 from typing import Union
 
-from model_llfs.audio_encoder import AudioEncoder
-from model_llfs.landmark_encoder import LandmarkEncoder
-from model_llfs.landmark_decoder import LandmarkDecoder
+from model_llfs_only.audio_encoder import AudioEncoder
+from model_llfs_only.landmark_encoder import LandmarkEncoder
+from model_llfs_only.landmark_decoder import LandmarkDecoder
 
 import cv2
 import numpy as np
@@ -79,7 +79,7 @@ class Model(nn.Module):
         self.audio_dim = audio_dim
         self.lm_dim = lm_dim
         
-        self.audio = AudioEncoder(dim_in=self.audio_dim)
+        self.audio = AudioEncoder(dim_in=32)
         self.landmark = LandmarkEncoder(input_dim=self.lm_dim, hidden_dim=128, output_dim=128, num_heads=8, num_layers=3)
         self.decoder = LandmarkDecoder(output_dim=self.lm_dim)
         
@@ -186,4 +186,4 @@ class Model(nn.Module):
                 plt.savefig(output_file, bbox_inches='tight')
                 plt.close()
                 
-#Eval. results - Epoch: 20; MAE: 2.0206; MSE: 0.0446; Custom: [M-LD: 2.9173;M-LV: 2.9173;F-LD: 3.1248;F-LV: 3.1474]
+#Eval. results - Epoch: 20; MAE: 1.9041; MSE: 0.0444; Custom: [M-LD: 3.6302;M-LV: 3.6302;F-LD: 2.9835;F-LV: 3.2781]
