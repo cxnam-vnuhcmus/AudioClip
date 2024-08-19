@@ -91,7 +91,7 @@ def extract_llf_features(audio_data, sr, n_fft, win_length, hop_length):
     rms = librosa.feature.rms(y=audio_data, frame_length=win_length, hop_length=hop_length, center=False)
 
     # Tần số cơ bản
-    chroma = librosa.feature.chroma_stft(y=audio_data, sr=sr, n_fft=n_fft, win_length=win_length, hop_length=hop_length, center=False)
+    chroma = librosa.feature.chroma_stft(n_chroma=17,y=audio_data, sr=sr, n_fft=n_fft, win_length=win_length, hop_length=hop_length, center=False)
 
     # Tần số biên độ
     spectral_centroid = librosa.feature.spectral_centroid(y=audio_data, sr=sr, n_fft=n_fft, win_length=win_length, hop_length=hop_length, center=False)
@@ -224,7 +224,7 @@ class Dataset(td.Dataset):
             audio_data, _ = librosa.load(audio_name, sr=self.sr)
             mel_spectrogram = librosa.feature.melspectrogram(y=audio_data, 
                                                             sr=self.sr, 
-                                                            n_mels=self.n_mels-27, 
+                                                            n_mels=self.n_mels, 
                                                             n_fft=self.n_fft,
                                                             win_length=self.win_length, 
                                                             hop_length=self.hop_length,
