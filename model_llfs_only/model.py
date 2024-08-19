@@ -1,68 +1,17 @@
 import torch
 from torch import nn
-
-from typing import Union
-
-from model_llfs_only.audio_encoder import AudioEncoder
-from model_llfs_only.landmark_encoder import LandmarkEncoder
-from model_llfs_only.landmark_decoder import LandmarkDecoder
-
 import cv2
 import numpy as np
 import torchvision
-from scipy.stats import wasserstein_distance
 import matplotlib.pyplot as plt
-import numpy as np
 import os
+from typing import Union
 
-
-# Chamfer Distance Function
-def chamfer_distance(x, y):
-    dist_matrix = torch.cdist(x, y)
-    min_dist_x = torch.min(dist_matrix, dim=1)[0]
-    min_dist_y = torch.min(dist_matrix, dim=0)[0]
-    return torch.mean(min_dist_x) + torch.mean(min_dist_y)
-
-# Earth Mover's Distance Function
-def earth_mover_distance(pred_feat, gt_feat):
-    pred_feat = pred_feat.detach().numpy()
-    gt_feat = gt_feat.detach().numpy()
-    B = pred_feat.shape[0]
-    emd_scores = []
-
-    for i in range(B):
-        pred = pred_feat[i].reshape(-1)
-        gt = gt_feat[i].reshape(-1)
-        emd = wasserstein_distance(pred, gt)
-        emd_scores.append(emd)
-
-    return torch.tensor(np.array(emd_scores))
-
-# Custom Loss Function Combining MAE, Chamfer Distance, and EMD
-class CustomLoss(nn.Module):
-    def __init__(self, alpha=1.0, beta=1.0, gamma=1.0):
-        super(CustomLoss, self).__init__()
-        self.alpha = alpha
-        self.beta = beta
-        self.gamma = gamma
-
-    def forward(self, pred, target):
-        pred = pred.cpu()
-        target = target.cpu()
-        
-        # MAE Loss
-        mae_loss = nn.L1Loss()(pred, target) #MAE Loss: Đo khoảng cách trung bình tuyệt đối giữa các điểm, giúp cải thiện độ chính xác của các tọa độ điểm.
-        
-        # Chamfer Distance Loss
-        chamfer_loss = chamfer_distance(pred, target) #Chamfer Distance: Đo sự tương đồng giữa hai tập hợp điểm bằng cách tính khoảng cách giữa các điểm gần nhất, có thể giúp cải thiện cấu trúc của các điểm landmark.
-        
-        # Earth Mover's Distance Loss
-        emd_loss = earth_mover_distance(pred, target) #EMD: Đo sự khác biệt giữa các phân phối điểm, giúp cải thiện khả năng phân phối của các điểm landmark.
-        
-        # Tổng hợp các mất mát với trọng số
-        total_loss = self.alpha * mae_loss + self.beta * chamfer_loss + self.gamma * emd_loss
-        return total_loss
-
+from .audio_encoder import AudioEncoder
+from .landmark_encoder import LandmarkEncoder
+from .landmark_decoder import LandmarkDecoder
+from .utils import plot_landmark_connections
+from .loss import CustomLoss
 
 class Model(nn.Module):
 
@@ -119,7 +68,7 @@ class Model(nn.Module):
 
         
     def training_step_imp(self, batch, device) -> torch.Tensor:
-        audio, landmark = batch
+        audio, landmark, _ = batch
         prv_landmark = landmark[:,:-1]
         gt_landmark = landmark[:,-1]
         _, loss = self(
@@ -132,7 +81,7 @@ class Model(nn.Module):
 
     def eval_step_imp(self, batch, device):
         with torch.no_grad():
-            audio, landmark = batch
+            audio, landmark, _ = batch
             prv_landmark = landmark[:,:-1]
             gt_landmark = landmark[:,-1].to(device)
             (pred_lm), _ = self(
@@ -144,7 +93,7 @@ class Model(nn.Module):
         
     def inference(self, batch, device, save_folder):
         with torch.no_grad():
-            audio, landmark = batch
+            audio, landmark, lm_paths = batch
             prv_landmark = landmark[:,:-1]
             gt_landmark = landmark[:,-1]
             (pred_landmark), _ = self(
@@ -155,34 +104,53 @@ class Model(nn.Module):
             pred_landmark = pred_landmark.detach().cpu()
             
             for i in range(gt_landmark.shape[0]):
-                image_size=256
-                output_file=os.path.join(save_folder,f'landmarks_{i}.png')
+                image_size = 256
+                output_file = os.path.join(save_folder, f'landmarks_{i}.png')
                 gt_lm = gt_landmark[i]
                 pred_lm = pred_landmark[i]
-                
+
                 # Chuyển đổi tọa độ landmark từ khoảng (0, 1) về kích thước ảnh (0, image_size)
                 gt_lm = gt_lm * image_size
                 pred_lm = pred_lm * image_size
-                
-                # Tạo ảnh nền trắng
-                image = np.ones((image_size, image_size, 3), dtype=np.uint8) * 255
-                
-                # Vẽ các điểm landmark
-                plt.figure(figsize=(8, 8))
-                plt.imshow(image)
-                
-                # Vẽ landmark của ground truth với màu đỏ
-                plt.scatter(gt_lm[:, 0], gt_lm[:, 1], color='red', label='Ground Truth', s=10)
-                
-                # Vẽ landmark của prediction với màu xanh dương
-                plt.scatter(pred_lm[:, 0], pred_lm[:, 1], color='blue', label='Prediction', s=10)
-                
-                # Thiết lập tiêu đề và legend
-                plt.title('Landmarks Visualization')
-                plt.legend()
-                
+
+                # Tạo ảnh nền từ ảnh có sẵn cho cả ba phần
+                img_paths = lm_paths[i].replace(".json", ".jpg")
+                img_paths = img_paths.replace("face_meshes", "images")
+                background = cv2.imread(img_paths)
+                background = cv2.cvtColor(background, cv2.COLOR_BGR2RGB)  # Chuyển từ BGR sang RGB
+                background = cv2.resize(background, (image_size, image_size))
+
+                # Tạo một ảnh lớn hơn để chứa ba phần
+                combined_image = np.ones((image_size, image_size * 3, 3), dtype=np.uint8) * 255
+
+                # Copy ảnh nền vào ba phần của ảnh lớn
+                combined_image[:, :image_size, :] = background
+                combined_image[:, image_size:image_size*2, :] = background
+                # combined_image[:, image_size*2:image_size*3, :] = background
+
+                # Tạo subplots
+                fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+
+                # Phần 1: Ảnh background + Ground Truth
+                axes[0].imshow(combined_image[:, :image_size, :])
+                plot_landmark_connections(axes[0], gt_lm, 'green')
+                axes[0].set_title('Ground Truth')
+                axes[0].axis('off')
+
+                # Phần 2: Ảnh background + Prediction
+                axes[1].imshow(combined_image[:, image_size:image_size*2, :])
+                plot_landmark_connections(axes[1], pred_lm, 'red')
+                axes[1].set_title('Prediction')
+                axes[1].axis('off')
+
+                # Phần 3: Ảnh Ground Truth (đỏ) và Prediction (xanh dương)
+                axes[2].imshow(combined_image[:, image_size*2:image_size*3, :])
+                axes[2].scatter(gt_lm[:, 0], gt_lm[:, 1], color='green', label='Ground Truth', s=2)
+                axes[2].scatter(pred_lm[:, 0], pred_lm[:, 1], color='red', label='Prediction', s=2)
+                axes[2].set_title('GT (Green) vs Prediction (Red)')
+                axes[2].axis('off')
+
                 # Lưu ảnh vào file
-                plt.axis('off')
                 plt.savefig(output_file, bbox_inches='tight')
                 plt.close()
                 
