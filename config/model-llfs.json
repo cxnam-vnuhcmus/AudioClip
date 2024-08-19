@@ -16,7 +16,7 @@
       "audio_dim": 80,
       "lm_dim": 262,
       "pretrained": false,
-      "infer_samples": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/samples_llfs"
+      "infer_samples": "./assets/samples_llfs"
     }
   },
   "Optimizer": {
@@ -35,10 +35,10 @@
     "class": "model_llfs.dataset.Dataset",
     "args": {
       "datalist_root": "./assets/datas/M003.txt",
-      "audio_dataroot": "/home/cxnam/Documents/MEAD/{p}/audios",
-      "visual_dataroot": "/home/cxnam/Documents/MEAD/{p}/images",
-      "lm_dataroot": "/home/cxnam/Documents/MEAD/{p}/face_meshes",
-      "transcript_dataroot": "/home/cxnam/Documents/MEAD/{p}/transcripts",
+      "audio_dataroot": "/data/anhldt/ai/MEAD/{p}/audios",
+      "visual_dataroot": "/data/anhldt/ai/MEAD/{p}/images",
+      "lm_dataroot": "/data/anhldt/ai/MEAD/{p}/face_meshes",
+      "transcript_dataroot": "/data/anhldt/ai/MEAD/{p}/transcripts",
       "fps": 25,
       "sample_rate": 16000,
       "n_mels": 80,
