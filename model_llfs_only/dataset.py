@@ -81,6 +81,7 @@ class Dataset(td.Dataset):
             filelists = filelists[:int(len(filelists) * 0.9)]
         else:
             filelists = filelists[int(len(filelists) * 0.9):] 
+            self.n_frames = self.n_frames * 2 - 1
                     
         self.all_datas = self.data_augmentation(filelists)
     

@@ -54,14 +54,17 @@ ALL_GROUPS = [FACEMESH_LIPS, FACEMESH_LEFT_EYE, FACEMESH_LEFT_EYEBROW,
 
 def get_indices_from_frozenset(frozenset_data):
     indices = set()
-    for group in ALL_GROUPS:
+    for group in frozenset_data:
         for (start_idx, end_idx) in group:
             indices.add(start_idx)
             indices.add(end_idx)
     return sorted(indices)
 
 FACEMESH_ROI_IDX = get_indices_from_frozenset(ALL_GROUPS)
-FACEMESH_LIPS_IDX = get_indices_from_frozenset(FACEMESH_LIPS)
+FACEMESH_LIPS_IDX = get_indices_from_frozenset([FACEMESH_LIPS])
+FACEMESH_FACES_IDX = get_indices_from_frozenset([FACEMESH_LEFT_EYE, FACEMESH_LEFT_EYEBROW, 
+              FACEMESH_RIGHT_EYE, FACEMESH_RIGHT_EYEBROW, FACEMESH_FACE_OVAL, 
+              FACEMESH_NOSE])
 
 def plot_landmark_connections(ax, landmarks, color):
     for group in ALL_GROUPS:

@@ -82,20 +82,29 @@ class Model(nn.Module):
     def eval_step_imp(self, batch, device):
         with torch.no_grad():
             audio, landmark, _ = batch
-            prv_landmark = landmark[:,:-1]
-            gt_landmark = landmark[:,-1].to(device)
-            (pred_lm), _ = self(
-                audio = audio, 
-                landmark = prv_landmark,
-                gt_lm = gt_landmark
-            )
-        return {"y_pred": pred_lm, "y": gt_landmark}
+            audio = audio.to(device)
+            landmark = landmark.to(device)
+            gt_landmark_backup = landmark.clone()
+            seg_len = (landmark.shape[1] + 1)//2
+            for i in range(seg_len - 1):
+                audio_seg = audio[:,i:i+seg_len]
+                prv_landmark = landmark[:,i:i+seg_len-1]
+                gt_landmark = gt_landmark_backup[:,i+seg_len-1]
+                (pred_lm), _ = self(
+                    audio = audio, 
+                    landmark = prv_landmark,
+                    gt_lm = gt_landmark
+                )
+                landmark[:,i+seg_len-1,:,:] = pred_lm
+                
+        return {"y_pred": landmark[:,seg_len-1:], "y": gt_landmark_backup[:,seg_len-1:]}
         
     def inference(self, batch, device, save_folder):
         with torch.no_grad():
             audio, landmark, lm_paths = batch
-            prv_landmark = landmark[:,:-1]
-            gt_landmark = landmark[:,-1]
+            seg_len = (landmark.shape[1] + 1)//2
+            prv_landmark = landmark[:,:seg_len-1]
+            gt_landmark = landmark[:,seg_len-1]
             (pred_landmark), _ = self(
                 audio = audio, 
                 landmark = prv_landmark,
@@ -154,4 +163,3 @@ class Model(nn.Module):
                 plt.savefig(output_file, bbox_inches='tight')
                 plt.close()
                 
-#Eval. results - Epoch: 20; MAE: 1.9041; MSE: 0.0444; Custom: [M-LD: 3.6302;M-LV: 3.6302;F-LD: 2.9835;F-LV: 3.2781]
