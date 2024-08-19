@@ -1,9 +1,12 @@
 from ignite.metrics import Metric
 import torch
+from torch import nn
+from scipy.stats import wasserstein_distance
+from .utils import FACEMESH_ROI_IDX, FACEMESH_LIPS_IDX, FACEMESH_FACES_IDX
+import numpy as np
 
-FACEMESH_ROI_IDX = [0, 4, 5, 6, 7, 13, 14, 17, 33, 37, 39, 40, 45, 46, 48, 52, 53, 55, 58, 61, 63, 65, 66, 70, 78, 80, 81, 82, 84, 87, 88, 91, 93, 95, 105, 107, 115, 127, 132, 133, 136, 144, 145, 146, 148, 149, 150, 152, 153, 154, 155, 157, 158, 159, 160, 161, 162, 163, 168, 172, 173, 176, 178, 181, 185, 191, 195, 197, 220, 234, 246, 249, 263, 267, 269, 270, 275, 276, 278, 282, 283, 285, 288, 291, 293, 295, 296, 300, 308, 310, 311, 312, 314, 317, 318, 321, 323, 324, 334, 336, 344, 356, 361, 362, 365, 373, 374, 375, 377, 378, 379, 380, 381, 382, 384, 385, 386, 387, 388, 389, 390, 397, 398, 400, 402, 405, 409, 415, 440, 454, 466]
-FACEMESH_LIPS_IDX = [0, 13, 14, 17, 37, 39, 40, 61, 78, 80, 81, 82, 84, 87, 88, 91, 95, 146, 178, 181, 185, 191, 267, 269, 270, 291, 308, 310, 311, 312, 314, 317, 318, 321, 324, 375, 402, 405, 409, 415]
-mapped_indices = [FACEMESH_ROI_IDX.index(i) for i in FACEMESH_LIPS_IDX]
+mapped_lips_indices = [FACEMESH_ROI_IDX.index(i) for i in FACEMESH_LIPS_IDX]
+mapped_faces_indices = [FACEMESH_ROI_IDX.index(i) for i in FACEMESH_FACES_IDX]
 
 # Custom metric class
 class CustomMetric(Metric):
@@ -21,23 +24,21 @@ class CustomMetric(Metric):
 
     def update(self, output):
         y_pred, y = output[0].cpu() * 256., output[1].cpu() * 256.
-        fld_score = self.calculate_LMD(y_pred, y)
-        flv_score = self.calculate_LMV(y_pred, y)
-        for fld in fld_score:
-            self._sum_fld += fld
-        for flv in flv_score:
-            self._sum_flv += flv
+        y_pred_faces = y_pred[:, :, mapped_faces_indices, :]
+        y_faces = y[:, :, mapped_faces_indices, :]
+        fld_score = self.calculate_LMD(y_pred_faces, y_faces)
+        flv_score = self.calculate_LMV(y_pred_faces, y_faces)
+        self._sum_fld = self._sum_fld + fld_score.sum()
+        self._sum_flv = self._sum_flv + flv_score.sum()
             
-        y_pred_lips = y_pred[:, mapped_indices, :]
-        y_lips = y[:, mapped_indices, :]
+        y_pred_lips = y_pred[:, :, mapped_lips_indices, :]
+        y_lips = y[:, :, mapped_lips_indices, :]
         mld_score = self.calculate_LMD(y_pred_lips, y_lips)
         mlv_score = self.calculate_LMV(y_pred_lips, y_lips)
-        for mld in mld_score:
-            self._sum_mld += mld
-        for mlv in mld_score:
-            self._sum_mlv += mlv
+        self._sum_mld = self._sum_mld + mld_score.sum()
+        self._sum_mlv = self._sum_mlv + mlv_score.sum()
         
-        self._num_examples += y_pred.shape[0]
+        self._num_examples = self._num_examples + y_pred.shape[0] + y_pred.shape[1]
 
     def compute(self):
         if self._num_examples == 0:
@@ -52,7 +53,7 @@ class CustomMetric(Metric):
     def calculate_LMD(self, pred_landmark, gt_landmark, norm_distance=1.0):
         euclidean_distance = torch.sqrt(torch.sum((pred_landmark - gt_landmark)**2, dim=(pred_landmark.ndim - 1)))
         norm_per_frame = torch.mean(euclidean_distance, dim=(pred_landmark.ndim - 2))
-        lmd = torch.divide(norm_per_frame, norm_distance)        
+        lmd = torch.divide(norm_per_frame, norm_distance)  
         return lmd
     
     def calculate_LMV(self, pred_landmark, gt_landmark, norm_distance=1.0):
@@ -67,3 +68,52 @@ class CustomMetric(Metric):
         norm_per_frame = torch.mean(euclidean_distance, dim=(pred_landmark.ndim - 2))
         lmv = torch.div(norm_per_frame, norm_distance)
         return lmv
+    
+
+# Chamfer Distance Function
+def chamfer_distance(x, y):
+    dist_matrix = torch.cdist(x, y)
+    min_dist_x = torch.min(dist_matrix, dim=1)[0]
+    min_dist_y = torch.min(dist_matrix, dim=0)[0]
+    return torch.mean(min_dist_x) + torch.mean(min_dist_y)
+
+# Earth Mover's Distance Function
+def earth_mover_distance(pred_feat, gt_feat):
+    pred_feat = pred_feat.detach().numpy()
+    gt_feat = gt_feat.detach().numpy()
+    B = pred_feat.shape[0]
+    emd_scores = []
+
+    for i in range(B):
+        pred = pred_feat[i].reshape(-1)
+        gt = gt_feat[i].reshape(-1)
+        emd = wasserstein_distance(pred, gt)
+        emd_scores.append(emd)
+
+    return torch.tensor(np.array(emd_scores))
+
+# Custom Loss Function Combining MAE, Chamfer Distance, and EMD
+class CustomLoss(nn.Module):
+    def __init__(self, alpha=1.0, beta=1.0, gamma=1.0):
+        super(CustomLoss, self).__init__()
+        self.alpha = alpha
+        self.beta = beta
+        self.gamma = gamma
+
+    def forward(self, pred, target):
+        pred = pred.cpu()
+        target = target.cpu()
+        
+        # MAE Loss
+        mae_loss = nn.L1Loss()(pred, target) #MAE Loss: Đo khoảng cách trung bình tuyệt đối giữa các điểm, giúp cải thiện độ chính xác của các tọa độ điểm.
+        
+        # Chamfer Distance Loss
+        chamfer_loss = chamfer_distance(pred, target) #Chamfer Distance: Đo sự tương đồng giữa hai tập hợp điểm bằng cách tính khoảng cách giữa các điểm gần nhất, có thể giúp cải thiện cấu trúc của các điểm landmark.
+        
+        # Earth Mover's Distance Loss
+        emd_loss = earth_mover_distance(pred, target) #EMD: Đo sự khác biệt giữa các phân phối điểm, giúp cải thiện khả năng phân phối của các điểm landmark.
+        
+        # Tổng hợp các mất mát với trọng số
+        total_loss = self.alpha * mae_loss + self.beta * chamfer_loss + self.gamma * emd_loss
+        return total_loss
+
