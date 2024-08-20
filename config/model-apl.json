@@ -15,8 +15,8 @@
     "args": {
       "audio_dim": 80,
       "lm_dim": 262,
-      "pretrained": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/checkpoints/cp_20_apl.pt",
-      "infer_samples": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/samples_apl"
+      "pretrained": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/checkpoints/cp_20_apl_v2.pt",
+      "infer_samples": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/samples_apl_v2"
     }
   },
   "Optimizer": {

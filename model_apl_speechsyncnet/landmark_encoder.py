@@ -85,9 +85,3 @@ class LandmarkEncoder(nn.Module):
         out = self.fc(x).unsqueeze(1)  # Kết quả shape là (B, 128)
 
         return out
-
-# # Ví dụ sử dụng
-# input_tensor = torch.rand(8, 5, 131, 2)  # Giả sử input có shape (B=8, N=5, 131, 2)
-# encoder = LandmarkEncoder(input_size=(131, 2), hidden_size=128)
-# output = encoder(input_tensor)
-# print(output.shape)  # Kết quả dự kiến là (8, 5, 128)
