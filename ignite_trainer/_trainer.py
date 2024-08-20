@@ -32,7 +32,6 @@ from collections.abc import Iterable
 from ignite_trainer import _utils
 from ignite_trainer import _interfaces
 
-from ignite.handlers.tensorboard_logger import *
 from ignite.handlers import Checkpoint, DiskSaver
 
 
@@ -216,25 +215,13 @@ def run(experiment_name: str,
             metric_obj: imet.Metric = _utils.load_class(metric_detail['class'])(output_transform=output_transform, device=device)
             metric_label = metric_detail.get('label', 'default_label')
             metric_use_for = metric_detail.get('use_for', [])
-            # metric_save_checkpoint = metric_detail.get('save_checkpoint', False)
             
             for use_for in metric_use_for:
                 if use_for == "val" and not skip_train_val:
                     metric_obj.attach(validator_train, metric_label)
                 elif use_for == "test":
                     metric_obj.attach(validator_eval, metric_label) 
-            # if metric_save_checkpoint:
-            #     checkpoint_metrics.append(metric_label)
 
-        # Create a logger
-        tb_logger = TensorboardLogger(log_dir=f"{saved_models_path}/tb_logs")
-        # Attach the logger to the trainer to log training loss at each iteration
-        tb_logger.attach_output_handler(
-            trainer,
-            event_name=ieng.Events.ITERATION_COMPLETED,
-            tag="training",
-            output_transform=lambda loss: {"loss": loss}
-        )
         
         #Save checkpoints
         handler = Checkpoint(
@@ -318,11 +305,14 @@ def run(experiment_name: str,
             for metric_detail in performance_metrics:
                 metric_label = metric_detail["label"]
                 if isinstance(validator.state.metrics[metric_label], str):
-                    tqdm_info.append('{}: {}'.format(metric_label, validator.state.metrics[metric_label]))
+                    tqdm_info.append('{}: {}'.format(metric_label, validator.state.metrics[metric_label]))                        
                 else:
                     tqdm_info.append('{}: {:.4f}'.format(metric_label, validator.state.metrics[metric_label]))
-            
             tqdm.tqdm.write('{} results - {}'.format(run_type, '; '.join(tqdm_info)))
+            
+            os.makedirs(f'{saved_models_path}/logs')
+            with open(f'{saved_models_path}/logs/{experiment_name}.txt', 'a') as f:
+                f.write('{} results - {}\n'.format(run_type, '; '.join(tqdm_info)))
         
         if not skip_train_val:
             @trainer.on(ieng.Events.EPOCH_COMPLETED)
