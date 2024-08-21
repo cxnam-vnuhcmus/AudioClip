@@ -1,6 +1,6 @@
 {
   "Setup": {
-    "name": "Model_LLFS_Only",
+    "name": "Model_Concate_M003",
     "suffix": "CV1",
     "batch_train": 32,
     "batch_test": 32,
@@ -11,12 +11,12 @@
     "saved_models_path": "./assets"
   },
   "Model": {
-    "class": "model_llfs_only.model.Model",
+    "class": "model_concate.model.Model",
     "args": {
       "audio_dim": 80,
       "lm_dim": 262,
       "pretrained": false,
-      "infer_samples": "./assets/samples_llfs_only"
+      "infer_samples": "./assets/samples_concate"
     }
   },
   "Optimizer": {
@@ -32,7 +32,7 @@
     }
   },
   "Dataset": {
-    "class": "model_llfs_only.dataset.Dataset",
+    "class": "model_concate.dataset.Dataset",
     "args": {
       "datalist_root": "./assets/datas/M003.txt",
       "audio_dataroot": "/home/cxnam/Documents/MEAD/{p}/audios",
@@ -109,7 +109,7 @@
     },
       {
           "label": "Custom",
-          "class": "model_llfs_only.loss.CustomMetric",
+          "class": "model_concate.loss.CustomMetric",
           "args": {"output_transform": ["y_pred", "y"]},
           "use_for": ["val","test"],
           "save_checkpoint": false

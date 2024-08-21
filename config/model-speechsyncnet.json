@@ -15,8 +15,8 @@
     "args": {
       "audio_dim": 80,
       "lm_dim": 262,
-      "pretrained": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/checkpoints/cp_20_speechsyncnet.pt",
-      "infer_samples": "/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/samples_speechsyncnet"
+      "pretrained": "./assets/checkpoints/cp_20_speechsyncnet.pt",
+      "infer_samples": "./assets/samples_speechsyncnet"
     }
   },
   "Optimizer": {
