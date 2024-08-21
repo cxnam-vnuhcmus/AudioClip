@@ -30,11 +30,12 @@ class Model(nn.Module):
         self.lm_dim = lm_dim
         
         self.audio = AudioEncoder(dim_in=self.audio_dim)
-        self.landmark = LandmarkEncoder(input_dim=self.lm_dim, hidden_dim=128, output_dim=128, num_heads=8, num_layers=3)
+        self.landmark = LandmarkEncoder(input_size=(131, 2), output_size=128, hidden_size=256)
         self.decoder = LandmarkDecoder(output_dim=self.lm_dim)
         
         self.criterion = CustomLoss(alpha=1.0, beta=0.5, gamma=0.5)
         self.constrative = ContrastiveModel(input_dim=128, hidden_dim=64, output_dim=128)
+
     
     @property
     def device(self):
@@ -42,7 +43,7 @@ class Model(nn.Module):
         return device
     
     def encode_audio(self, audio: torch.Tensor) -> torch.Tensor:
-        audio_embedding = self.audio(audio.to(device=self.device, dtype=torch.float32))
+        audio_embedding,_ = self.audio(audio.to(device=self.device, dtype=torch.float32))
         return audio_embedding
     
     def encode_landmark(self, landmarks: torch.Tensor) -> torch.Tensor:
@@ -58,9 +59,10 @@ class Model(nn.Module):
         landmark_features = self.encode_landmark(landmark)        #(B,N-1,131,2) -> (B,1,128)
         pred_lm = self.decoder(audio_features, landmark_features) #(B,1,131,2)
         pred_lm = pred_lm.squeeze(1)
-        lm_loss = self.loss_fn(pred_lm, gt_lm).to(self.device)
+        lm_loss = self.loss_fn(pred_lm, gt_lm)
         contrastive_loss = self.constrative(audio_features, landmark_features)
         loss = lm_loss + contrastive_loss
+        
         return (pred_lm), loss
         
     def loss_fn(self, pred_features, gt_features):
@@ -164,3 +166,5 @@ class Model(nn.Module):
                 # Lưu ảnh vào file
                 plt.savefig(output_file, bbox_inches='tight')
                 plt.close()
+                
+#Eval. results - Epoch: 20; MAE: 2.8959; MSE: 0.2578; Custom: [M-LD: 4.3182;M-LV: 4.3182;F-LD: 4.5771;F-LV: 6.9013]

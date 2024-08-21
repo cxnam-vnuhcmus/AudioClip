@@ -15,7 +15,7 @@
     "args": {
       "audio_dim": 80,
       "lm_dim": 262,
-      "pretrained": false,
+      "pretrained": "./assets/checkpoints/cp_20_apl_ssn_contrastive.pt",
       "infer_samples": "./assets/samples_apl_ssn_contrastive"
     }
   },
@@ -34,7 +34,7 @@
   "Dataset": {
     "class": "model_apl_ssn_contrastive.dataset.Dataset",
     "args": {
-      "datalist_root": "./assets/datas/M003.txt",
+      "datalist_root": "./assets/datas/M030.txt",
       "audio_dataroot": "/home/cxnam/Documents/MEAD/{p}/audios",
       "visual_dataroot": "/home/cxnam/Documents/MEAD/{p}/images",
       "lm_dataroot": "/home/cxnam/Documents/MEAD/{p}/face_meshes",

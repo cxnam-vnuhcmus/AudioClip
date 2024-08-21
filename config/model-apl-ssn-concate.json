@@ -1,6 +1,6 @@
 {
   "Setup": {
-    "name": "Model_Contrastive_M003",
+    "name": "Model_APL_SSN_Concate",
     "suffix": "CV1",
     "batch_train": 32,
     "batch_test": 32,
@@ -11,12 +11,12 @@
     "saved_models_path": "./assets"
   },
   "Model": {
-    "class": "model_contrastive.model.Model",
+    "class": "model_apl_ssn_concate.model.Model",
     "args": {
       "audio_dim": 80,
       "lm_dim": 262,
-      "pretrained": "./assets/checkpoints/cp_20_contrastive.pt",
-      "infer_samples": "./assets/samples_contrastive"
+      "pretrained": false,
+      "infer_samples": "./assets/samples_apl_ssn_concate"
     }
   },
   "Optimizer": {
@@ -32,13 +32,13 @@
     }
   },
   "Dataset": {
-    "class": "model_contrastive.dataset.Dataset",
+    "class": "model_apl_ssn_concate.dataset.Dataset",
     "args": {
-      "datalist_root": "./assets/datas/M030.txt",
-      "audio_dataroot": "/home/cxnam/Documents/MEAD/{p}/audios",
-      "visual_dataroot": "/home/cxnam/Documents/MEAD/{p}/images",
-      "lm_dataroot": "/home/cxnam/Documents/MEAD/{p}/face_meshes",
-      "transcript_dataroot": "/home/cxnam/Documents/MEAD/{p}/transcripts",
+      "datalist_root": "./assets/datas/M003.txt",
+      "audio_dataroot": "/data/anhldt/ai/MEAD/{p}/audios",
+      "visual_dataroot": "/data/anhldt/ai/MEAD/{p}/images",
+      "lm_dataroot": "/data/anhldt/ai/MEAD/{p}/face_meshes",
+      "transcript_dataroot": "/data/anhldt/ai/MEAD/{p}/transcripts",
       "fps": 25,
       "sample_rate": 16000,
       "n_mels": 80,
@@ -109,7 +109,7 @@
     },
       {
           "label": "Custom",
-          "class": "model_contrastive.loss.CustomMetric",
+          "class": "model_apl_ssn_concate.loss.CustomMetric",
           "args": {"output_transform": ["y_pred", "y"]},
           "use_for": ["val","test"],
           "save_checkpoint": false

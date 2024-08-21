@@ -57,7 +57,7 @@ class Model(nn.Module):
         landmark_features = self.encode_landmark(landmark)        #(B,N-1,131,2) -> (B,1,128)
         pred_lm = self.decoder(audio_features, landmark_features) #(B,1,131,2)
         pred_lm = pred_lm.squeeze(1)
-        loss = self.loss_fn(pred_lm, gt_lm)
+        loss = self.loss_fn(pred_lm, gt_lm).to(self.device)
         
         return (pred_lm), loss
         
