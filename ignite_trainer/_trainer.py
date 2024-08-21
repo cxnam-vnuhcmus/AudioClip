@@ -310,7 +310,7 @@ def run(experiment_name: str,
                     tqdm_info.append('{}: {:.4f}'.format(metric_label, validator.state.metrics[metric_label]))
             tqdm.tqdm.write('{} results - {}'.format(run_type, '; '.join(tqdm_info)))
             
-            os.makedirs(f'{saved_models_path}/logs')
+            os.makedirs(f'{saved_models_path}/logs', exist_ok=True)
             with open(f'{saved_models_path}/logs/{experiment_name}.txt', 'a') as f:
                 f.write('{} results - {}\n'.format(run_type, '; '.join(tqdm_info)))
         
