@@ -1,0 +1,118 @@
+{
+  "Setup": {
+    "name": "Model_LLFS_Only_FullMesh_M003",
+    "suffix": "CV1",
+    "batch_train": 32,
+    "batch_test": 32,
+    "workers_train": 10,
+    "workers_test": 10,
+    "epochs": 20,
+    "log_interval": 50,
+    "saved_models_path": "./assets"
+  },
+  "Model": {
+    "class": "model_llfs_only_fullmesh.model.Model",
+    "args": {
+      "audio_dim": 80,
+      "lm_dim": 956,
+      "pretrained": false,
+      "infer_samples": "./assets/samples_llfs_only_fullmesh"
+    }
+  },
+  "Optimizer": {
+    "class": "torch.optim.Adam",
+    "args": {
+      "lr": 1.0e-4
+    }
+  },
+  "Scheduler": {
+    "class": "torch.optim.lr_scheduler.ExponentialLR",
+    "args": {
+      "gamma": 0.96
+    }
+  },
+  "Dataset": {
+    "class": "model_llfs_only_fullmesh.dataset.Dataset",
+    "args": {
+      "datalist_root": "./assets/datas/M003.txt",
+      "audio_dataroot": "/home/cxnam/Documents/MEAD/{p}/audios",
+      "visual_dataroot": "/home/cxnam/Documents/MEAD/{p}/images",
+      "lm_dataroot": "/home/cxnam/Documents/MEAD/{p}/face_meshes",
+      "transcript_dataroot": "/home/cxnam/Documents/MEAD/{p}/transcripts",
+      "fps": 25,
+      "sample_rate": 16000,
+      "n_mels": 80,
+      "n_fft": 800,
+      "win_length": 800,
+      "hop_length": 635,
+      "n_frames": 5,
+      "img_size": 224,
+      "training": {"key": "train", "yes": true, "no": false}
+    }
+  },
+  "Transforms": [
+    {
+      "class": "utils.transforms.ToTensor1D",
+      "args": {}
+    },
+    {
+      "class": "utils.transforms.RandomFlip",
+      "args": {"p": 0.5},
+      "test": false
+    },
+    {
+      "class": "utils.transforms.RandomScale",
+      "args": {"max_scale": 1.50},
+      "test": false
+    },
+    {
+      "class": "utils.transforms.RandomPadding",
+      "args": {"out_len": 220500},
+      "test": false
+    },
+    {
+      "class": "utils.transforms.RandomCrop",
+      "args": {"out_len": 220500},
+      "test": false
+    },
+    {
+      "class": "utils.transforms.RandomNoise",
+      "args": {"snr_min_db": 10.0, "snr_max_db": 120.0, "p": 0.25},
+      "test": false
+    },
+    {
+      "class": "utils.transforms.RandomPadding",
+      "args": {"out_len": 220500, "train": false},
+      "train": false
+    },
+    {
+      "class": "utils.transforms.RandomCrop",
+      "args": {"out_len": 220500, "train": false},
+      "train": false
+    }
+  ],
+  "Metrics": [
+      
+      {
+          "label": "MAE",
+          "class": "ignite.metrics.MeanAbsoluteError",
+          "args": {"output_transform": ["y_pred", "y"]},
+          "use_for": ["val","test"],
+          "save_checkpoint": true
+      },
+      {
+        "label": "MSE",
+        "class": "ignite.metrics.MeanSquaredError",
+        "args": {"output_transform": ["y_pred", "y"]},
+        "use_for": ["val","test"],
+        "save_checkpoint": true
+    },
+      {
+          "label": "Custom",
+          "class": "model_llfs_only_fullmesh.loss.CustomMetric",
+          "args": {"output_transform": ["y_pred", "y"]},
+          "use_for": ["val","test"],
+          "save_checkpoint": false
+      }
+  ]
+}
