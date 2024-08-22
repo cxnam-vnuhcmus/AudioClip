@@ -18,3 +18,5 @@ Eval. results - Epoch: 17; MAE: 11.4790; MSE: 0.3922; Custom: [M-LD: 17.5605;M-L
 Eval. results - Epoch: 18; MAE: 13.3060; MSE: 0.5756; Custom: [M-LD: 21.8178;M-LV: 15.8872;F-LD: 16.3804;F-LV: 11.3892]
 Eval. results - Epoch: 19; MAE: 13.5520; MSE: 0.4550; Custom: [M-LD: 20.5609;M-LV: 14.9667;F-LD: 16.8891;F-LV: 11.3746]
 Eval. results - Epoch: 20; MAE: 14.7875; MSE: 0.7350; Custom: [M-LD: 23.6168;M-LV: 18.0615;F-LD: 18.0608;F-LV: 13.5247]
+Eval. results - Epoch: 0; MAE: 12.5987; MSE: 0.3098; Custom: [M-LD: 17.4753;M-LV: 11.6452;F-LD: 16.6417;F-LV: 10.9003]
+Eval. results - Epoch: 0; MAE: 12.5987; MSE: 0.3098; Custom: [M-LD: 17.4753;M-LV: 11.6452;F-LD: 16.6417;F-LV: 10.9003]

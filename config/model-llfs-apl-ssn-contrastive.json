@@ -1,6 +1,6 @@
 {
   "Setup": {
-    "name": "Model_SpeechSyncNet",
+    "name": "Model_LLFS_APL_SSN_Contrastive",
     "suffix": "CV1",
     "batch_train": 32,
     "batch_test": 32,
@@ -11,12 +11,12 @@
     "saved_models_path": "./assets"
   },
   "Model": {
-    "class": "model_speechsyncnet.model.Model",
+    "class": "model_llfs_apl_ssn_contrastive.model.Model",
     "args": {
       "audio_dim": 80,
       "lm_dim": 262,
-      "pretrained": "./assets/checkpoints/cp_20_speechsyncnet.pt",
-      "infer_samples": "./assets/samples_speechsyncnet"
+      "pretrained": false,
+      "infer_samples": "./assets/samples_llfs_apl_ssn_contrastive"
     }
   },
   "Optimizer": {
@@ -32,9 +32,9 @@
     }
   },
   "Dataset": {
-    "class": "model_speechsyncnet.dataset.Dataset",
+    "class": "model_llfs_apl_ssn_contrastive.dataset.Dataset",
     "args": {
-      "datalist_root": "./assets/datas/M005.txt",
+      "datalist_root": "./assets/datas/M003.txt",
       "audio_dataroot": "/home/cxnam/Documents/MEAD/{p}/audios",
       "visual_dataroot": "/home/cxnam/Documents/MEAD/{p}/images",
       "lm_dataroot": "/home/cxnam/Documents/MEAD/{p}/face_meshes",
@@ -109,7 +109,7 @@
     },
       {
           "label": "Custom",
-          "class": "model_speechsyncnet.loss.CustomMetric",
+          "class": "model_llfs_apl_ssn_contrastive.loss.CustomMetric",
           "args": {"output_transform": ["y_pred", "y"]},
           "use_for": ["val","test"],
           "save_checkpoint": false

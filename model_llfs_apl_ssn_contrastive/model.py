@@ -29,7 +29,7 @@ class Model(nn.Module):
         self.audio_dim = audio_dim
         self.lm_dim = lm_dim
         
-        self.audio = AudioEncoder(dim_in=self.audio_dim)
+        self.audio = AudioEncoder(dim_in=self.audio_dim+32)
         self.landmark = LandmarkEncoder(input_size=(131, 2), output_size=128, hidden_size=256)
         self.decoder = LandmarkDecoder(output_dim=self.lm_dim)
         
