@@ -1,0 +1,2 @@
+Eval. results - Epoch: 0; MAE: 7.2935; MSE: 0.6592; Custom: [M-LD: 10.1539;M-LV: 9.5422;F-LD: 10.7053;F-LV: 9.2724]
+Eval. results - Epoch: 0; MAE: 8.3515; MSE: 0.7257; Custom: [M-LD: 12.4110;M-LV: 10.9453;F-LD: 11.6404;F-LV: 10.2163]
