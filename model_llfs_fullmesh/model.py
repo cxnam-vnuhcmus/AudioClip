@@ -12,6 +12,7 @@ from .landmark_encoder import LandmarkEncoder
 from .landmark_decoder import LandmarkDecoder
 from .utils import plot_landmark_connections
 from .loss import CustomLoss
+#Eval. results - Epoch: 0; MAE: 58.5492; MSE: 4.2870; Custom: [M-LD: 22.7927;M-LV: 14.0516;F-LD: 20.9474;F-LV: 13.2672]               
 
 class Model(nn.Module):
 

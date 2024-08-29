@@ -65,7 +65,8 @@ def run(experiment_name: str,
         model_suffix: Optional[str] = None,
         setup_suffix: Optional[str] = None,
         orig_stdout: Optional[io.TextIOBase] = None,
-        skip_train_val: bool = False
+        skip_train_val: bool = False,
+        log_samples: Optional[str] = None
         ):
 
     with _utils.tqdm_stdout(orig_stdout) as orig_stdout:
@@ -188,21 +189,11 @@ def run(experiment_name: str,
         def eval_step(engine: ieng.Engine, batch) -> _interfaces.TensorPair:
             model.eval()
             
-            default_samples_path = f"{saved_models_path}/samples"
-            is_infer_samples = False
-            if isinstance(model_args['infer_samples'],str):
-                default_samples_path = model_args['infer_samples']
-                is_infer_samples = True
-            elif isinstance(model_args['infer_samples'],bool):
-                is_infer_samples = model_args['infer_samples']
-            
-            if is_infer_samples and ((engine.state.iteration - 1) % len(train_loader)) == 0:
-                save_folder = default_samples_path
-                os.makedirs(save_folder, exist_ok=True)
-                Network.inference(model, batch, device, save_folder)
-                return Network.eval_step_imp(model, batch, device)
-            else:
-                return Network.eval_step_imp(model, batch, device)
+            if log_samples is not None and ((engine.state.iteration - 1) % len(train_loader)) == 0:
+                os.makedirs(log_samples, exist_ok=True)
+                Network.inference(model, batch, device, log_samples)
+
+            return Network.eval_step_imp(model, batch, device)
             
         trainer = ieng.Engine(training_step)
         validator_train = ieng.Engine(eval_step)
@@ -228,6 +219,7 @@ def run(experiment_name: str,
             {'model': model, 'optimizer': optimizer, 'trainer': trainer},
             DiskSaver(f'{saved_models_path}/checkpoints', create_dir=True, require_empty=False),
             n_saved=2,  # Số lượng checkpoint cần lưu
+            filename_prefix=f'checkpoint_{setup_suffix}',
             global_step_transform=lambda e, _: e.state.epoch  # Sử dụng số epoch làm global step
         )
         trainer.add_event_handler(ieng.Events.EPOCH_COMPLETED, handler)
@@ -310,9 +302,9 @@ def run(experiment_name: str,
                     tqdm_info.append('{}: {:.4f}'.format(metric_label, validator.state.metrics[metric_label]))
             tqdm.tqdm.write('{} results - {}'.format(run_type, '; '.join(tqdm_info)))
             
-            os.makedirs(f'{saved_models_path}/logs', exist_ok=True)
-            with open(f'{saved_models_path}/logs/{experiment_name}.txt', 'a') as f:
-                f.write('{} results - {}\n'.format(run_type, '; '.join(tqdm_info)))
+            # os.makedirs(f'{saved_models_path}/logs', exist_ok=True)
+            # with open(f'{saved_models_path}/logs/{experiment_name}.txt', 'a') as f:
+            #     f.write('{} results - {}\n'.format(run_type, '; '.join(tqdm_info)))
         
         if not skip_train_val:
             @trainer.on(ieng.Events.EPOCH_COMPLETED)
@@ -341,6 +333,187 @@ def run(experiment_name: str,
 
     tqdm.tqdm.write('\n')
 
+def run_evaluation(experiment_name: str,
+        model_class: str,
+        model_args: Dict[str, Any],
+        optimizer_class: str,
+        optimizer_args: Dict[str, Any],
+        dataset_class: str,
+        dataset_args: Dict[str, Any],
+        batch_train: int,
+        batch_test: int,
+        workers_train: int,
+        workers_test: int,
+        transforms: List[Dict[str, Union[str, Dict[str, Any]]]],
+        epochs: int,
+        log_interval: int,
+        saved_models_path: str,
+        performance_metrics: Optional = None,
+        scheduler_class: Optional[str] = None,
+        scheduler_args: Optional[Dict[str, Any]] = None,
+        model_suffix: Optional[str] = None,
+        setup_suffix: Optional[str] = None,
+        orig_stdout: Optional[io.TextIOBase] = None,
+        skip_train_val: bool = False,
+        log_samples: Optional[str] = None
+        ):
+
+    with _utils.tqdm_stdout(orig_stdout) as orig_stdout:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        num_gpus = torch.cuda.device_count()
+
+        if num_gpus > 1:
+            experiment_name = f'{experiment_name}-x{num_gpus}'
+
+        transforms_train = list()
+        transforms_test = list()
+
+        for idx, transform in enumerate(transforms):
+            use_train = transform.get('train', True)
+            use_test = transform.get('test', True)
+
+            transform = _utils.load_class(transform['class'])(**transform['args'])
+
+            if use_train:
+                transforms_train.append(transform)
+            if use_test:
+                transforms_test.append(transform)
+
+            transforms[idx]['train'] = use_train
+            transforms[idx]['test'] = use_test
+
+        transforms_train = tv.transforms.Compose(transforms_train)
+        transforms_test = tv.transforms.Compose(transforms_test)
+
+        Dataset: Type = _utils.load_class(dataset_class)
+        
+        train_loader, eval_loader = _utils.get_data_loaders(
+            Dataset,
+            dataset_args,
+            batch_train,
+            batch_test,
+            workers_train,
+            workers_test,
+            transforms_train,
+            transforms_test
+        )
+
+        Network: Type = _utils.load_class(model_class)
+        
+        model: _interfaces.AbstractNet = Network(**model_args)
+
+        model = torch.nn.DataParallel(model, device_ids=range(num_gpus))
+        model = model.to(device)
+
+        # add only enabled parameters to optimizer's list
+        param_groups = [
+            {'params': [p for p in model.module.parameters() if p.requires_grad]}
+        ]
+
+        Optimizer: Type = _utils.load_class(optimizer_class)
+        optimizer: torch.optim.Optimizer = Optimizer(
+            param_groups,
+            **{**optimizer_args, **{'lr': optimizer_args['lr'] * num_gpus}}
+        )
+
+        if scheduler_class is not None:
+            Scheduler: Type = _utils.load_class(scheduler_class)
+
+            if scheduler_args is None:
+                scheduler_args = dict()
+
+            scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = Scheduler(optimizer, **scheduler_args)
+        else:
+            scheduler = None
+
+        model_short_name = ''.join([c for c in Network.__name__ if c == c.upper()])
+        model_name = '{}{}'.format(
+            model_short_name,
+            '-{}'.format(model_suffix) if model_suffix is not None else ''
+        )
+
+        num_params_total = sum(p.numel() for p in model.parameters())
+        num_params_train = sum(p.numel() for grp in optimizer.param_groups for p in grp['params'])
+
+        params_total_label = ''
+        params_train_label = ''
+        if num_params_total > 1e6:
+            num_params_total /= 1e6
+            params_total_label = 'M'
+        elif num_params_total > 1e3:
+            num_params_total /= 1e3
+            params_total_label = 'k'
+
+        if num_params_train > 1e6:
+            num_params_train /= 1e6
+            params_train_label = 'M'
+        elif num_params_train > 1e3:
+            num_params_train /= 1e3
+            params_train_label = 'k'
+
+        tqdm.tqdm.write(f'\n{Network.__name__}\n')
+        tqdm.tqdm.write('Total number of parameters: {:.2f}{}'.format(num_params_total, params_total_label))
+        tqdm.tqdm.write('Number of trainable parameters: {:.2f}{}'.format(num_params_train, params_train_label))
+
+        def eval_step(engine: ieng.Engine, batch) -> _interfaces.TensorPair:
+            model.eval()
+                        
+            if log_samples is not None and ((engine.state.iteration - 1) % len(train_loader)) == 0:
+                os.makedirs(log_samples, exist_ok=True)
+                Network.inference(model, batch, device, log_samples)
+                
+            return Network.eval_step_imp(model, batch, device)
+            
+        validator_eval = ieng.Engine(eval_step)
+
+        #Metrics
+        for metric_detail in performance_metrics:
+            output_transform = (lambda output: list([output[key] for key in metric_detail['args']['output_transform']]))
+            metric_obj: imet.Metric = _utils.load_class(metric_detail['class'])(output_transform=output_transform, device=device)
+            metric_label = metric_detail.get('label', 'default_label')
+            metric_use_for = metric_detail.get('use_for', [])
+            
+            for use_for in metric_use_for:
+                metric_obj.attach(validator_eval, metric_label) 
+
+        
+        #Load checkpoints
+        if model_args['pretrained'] is not None:
+            checkpoint = torch.load(model_args['pretrained'])
+            Checkpoint.load_objects(to_load={
+                'model': model,
+                'optimizer': optimizer
+            }, checkpoint=checkpoint)
+            print(f"Load checkpoint: {model_args['pretrained']}")
+         
+        prog_bar_validation = tqdm.tqdm(
+            eval_loader,
+            desc=f'Evaluation',
+            file=orig_stdout,
+            dynamic_ncols=True,
+            leave=False
+        )
+        validator_eval.run(prog_bar_validation)
+        prog_bar_validation.clear()
+        prog_bar_validation.close()
+
+        tqdm_info = [model_class, dataset_args['data_file']]
+        for metric_detail in performance_metrics:
+            metric_label = metric_detail["label"]
+            if isinstance(validator_eval.state.metrics[metric_label], str):
+                tqdm_info.append('{}: {}'.format(metric_label, validator_eval.state.metrics[metric_label]))                        
+            else:
+                tqdm_info.append('{}: {:.4f}'.format(metric_label, validator_eval.state.metrics[metric_label]))
+        tqdm.tqdm.write('Eval results - {}'.format('; '.join(tqdm_info)))
+        
+        os.makedirs(f'{saved_models_path}/logs', exist_ok=True)
+        with open(f'{saved_models_path}/logs/{experiment_name}.txt', 'a') as f:
+            f.write('Eval results - {}'.format('; '.join(tqdm_info)))
+        
+        del train_loader
+        del eval_loader
+
+    tqdm.tqdm.write('\n')
 
 def main():
     with _utils.tqdm_stdout() as orig_stdout:
@@ -357,8 +530,11 @@ def main():
         parser.add_argument('-R', '--random-seed', type=int, required=False)
         parser.add_argument('-s', '--suffix', type=str, required=False)
         parser.add_argument('-S', '--skip-train-val', action='store_true', default=False)
-        parser.add_argument('-V', '--visdom', action='store_true', default=False)
-        parser.add_argument('-T', '--test_only', action='store_true', default=False)
+        parser.add_argument('-d', '--data_root', type=str, required=True)
+        parser.add_argument('-f', '--data_file', type=str, required=True)
+        parser.add_argument('--log_samples', type=str, required=False)
+        parser.add_argument('--evaluation', action='store_true', default=False)
+        parser.add_argument('--pretrained', type=str, required=False)
 
         args, unknown_args = parser.parse_known_args()
 
@@ -460,7 +636,7 @@ def main():
                         'red'
                     )
                 )
-
+                
             config = defaultdict(None, config)
 
             experiment_name = config['Setup']['name']
@@ -486,9 +662,10 @@ def main():
             saved_models_path = _utils.arg_selector(
                 args.saved_models_path, config['Setup']['saved_models_path'], SAVED_MODELS_PATH
             )
-
+            
             model_class = config['Model']['class']
             model_args = config['Model']['args']
+            model_args["pretrained"] = args.pretrained
 
             optimizer_class = config['Optimizer']['class']
             optimizer_args = config['Optimizer']['args']
@@ -502,36 +679,66 @@ def main():
 
             dataset_class = config['Dataset']['class']
             dataset_args = config['Dataset']['args']
+            dataset_args["data_root"] = args.data_root
+            dataset_args["data_file"] = args.data_file
 
             transforms = config['Transforms']
             performance_metrics = config['Metrics']
 
             tqdm.tqdm.write(f'\nStarting experiment "{experiment_name}"\n')
 
-            run(
-                experiment_name=experiment_name,
-                model_class=model_class,
-                model_args=model_args,
-                optimizer_class=optimizer_class,
-                optimizer_args=optimizer_args,
-                dataset_class=dataset_class,
-                dataset_args=dataset_args,
-                batch_train=batch_train,
-                batch_test=batch_test,
-                workers_train=workers_train,
-                workers_test=workers_test,
-                transforms=transforms,
-                epochs=epochs,
-                log_interval=log_interval,
-                saved_models_path=saved_models_path,
-                performance_metrics=performance_metrics,
-                scheduler_class=scheduler_class,
-                scheduler_args=scheduler_args,
-                model_suffix=config['Setup']['suffix'],
-                setup_suffix=args.suffix,
-                orig_stdout=orig_stdout,
-                skip_train_val=args.skip_train_val
-            )
+            if not args.evaluation:
+                run(
+                    experiment_name=experiment_name,
+                    model_class=model_class,
+                    model_args=model_args,
+                    optimizer_class=optimizer_class,
+                    optimizer_args=optimizer_args,
+                    dataset_class=dataset_class,
+                    dataset_args=dataset_args,
+                    batch_train=batch_train,
+                    batch_test=batch_test,
+                    workers_train=workers_train,
+                    workers_test=workers_test,
+                    transforms=transforms,
+                    epochs=epochs,
+                    log_interval=log_interval,
+                    saved_models_path=saved_models_path,
+                    performance_metrics=performance_metrics,
+                    scheduler_class=scheduler_class,
+                    scheduler_args=scheduler_args,
+                    model_suffix=config['Setup']['suffix'],
+                    setup_suffix=args.suffix,
+                    orig_stdout=orig_stdout,
+                    skip_train_val=args.skip_train_val,
+                    log_samples = args.log_samples
+                )
+            else:
+                run_evaluation(
+                    experiment_name=experiment_name,
+                    model_class=model_class,
+                    model_args=model_args,
+                    optimizer_class=optimizer_class,
+                    optimizer_args=optimizer_args,
+                    dataset_class=dataset_class,
+                    dataset_args=dataset_args,
+                    batch_train=batch_train,
+                    batch_test=batch_test,
+                    workers_train=workers_train,
+                    workers_test=workers_test,
+                    transforms=transforms,
+                    epochs=epochs,
+                    log_interval=log_interval,
+                    saved_models_path=saved_models_path,
+                    performance_metrics=performance_metrics,
+                    scheduler_class=scheduler_class,
+                    scheduler_args=scheduler_args,
+                    model_suffix=config['Setup']['suffix'],
+                    setup_suffix=args.suffix,
+                    orig_stdout=orig_stdout,
+                    skip_train_val=args.skip_train_val,
+                    log_samples = args.log_samples
+                )
 
         prog_bar_exps.close()
 

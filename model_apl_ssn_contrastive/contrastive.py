@@ -27,7 +27,7 @@ class ContrastiveLoss(nn.Module):
         similarity_matrix = torch.matmul(audio_features, landmark_features.T) / self.temperature
         labels = torch.arange(audio_features.size(0), device=audio_features.device)
         loss = nn.CrossEntropyLoss(reduction='none')(similarity_matrix, labels)
-        return loss.detach().cpu()
+        return loss
     
 class ContrastiveModel(nn.Module):
     def __init__(self, input_dim=128, hidden_dim=64, output_dim=128):

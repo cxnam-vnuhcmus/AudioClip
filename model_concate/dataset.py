@@ -16,7 +16,8 @@ from .utils import FACEMESH_ROI_IDX, extract_llf_features
 class Dataset(td.Dataset):
 
     def __init__(self, 
-                 datalist_root: str,
+                 data_root: str,
+                 data_file: str,
                  audio_dataroot: str,
                  visual_dataroot: str,
                  transcript_dataroot: str, 
@@ -33,11 +34,12 @@ class Dataset(td.Dataset):
                  **_
                  ):
         super(Dataset, self).__init__()
-        self.datalist_root = datalist_root
-        self.audio_dataroot = audio_dataroot
-        self.visual_dataroot = visual_dataroot
-        self.transcript_dataroot = transcript_dataroot
-        self.lm_dataroot = lm_dataroot
+        self.data_root = data_root
+        self.data_file = data_file
+        self.audio_dataroot = os.path.join(self.data_root, audio_dataroot)
+        self.visual_dataroot = os.path.join(self.data_root, visual_dataroot)
+        self.transcript_dataroot = os.path.join(self.data_root, transcript_dataroot)
+        self.lm_dataroot = os.path.join(self.data_root, lm_dataroot)
         self.fps = fps
         self.img_size = img_size
         self.sr = sample_rate
@@ -59,13 +61,15 @@ class Dataset(td.Dataset):
         ]) 
         
         
-        if os.path.isdir(self.datalist_root):
-            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.datalist_root))][:5]
-            data_path = os.path.join(self.datalist_root,'{p}.txt')
+        if os.path.isdir(self.data_file):
+            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.data_file))]
+            end_index = int(len(persons) * 0.8)
+            persons = persons[:end_index]
+            data_path = os.path.join(self.data_file,'{p}.txt')
         else:
-            persons, _ = os.path.splitext(os.path.basename(self.datalist_root))   
+            persons, _ = os.path.splitext(os.path.basename(self.data_file))   
             persons = [persons] 
-            data_path = self.datalist_root
+            data_path = self.data_file
         
         filelists = []
         for p in tqdm(persons, total=len(persons)):
@@ -74,7 +78,7 @@ class Dataset(td.Dataset):
                 for line in file:
                     line = line.strip()
                     filelists.append(f"{p}\t{line}")
-                    
+        
         random.seed(0)
         random.shuffle(filelists)
         if self.train:
@@ -174,7 +178,7 @@ class Dataset(td.Dataset):
             mel_segment = mel_spectrogram_db[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 80)
             break
         
-        return (mel_segment, lm_data_list, os.path.join(lm_folder,lm_paths[segment_start_idx + self.n_frames-1]))
+        return (mel_segment, lm_data_list, os.path.join(lm_folder,lm_paths[segment_start_idx + (self.n_frames + 1)//2-1]))
 
     def collate_fn(self, batch):
         batch_audio, batch_landmark, lm_paths = zip(*batch)

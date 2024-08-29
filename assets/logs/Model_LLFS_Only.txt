@@ -1,1 +1,0 @@
-Eval. results - Epoch: 0; MAE: 20.8248; MSE: 1.2341; Custom: [M-LD: 38.7868;M-LV: 29.1504;F-LD: 23.4969;F-LV: 18.6804]

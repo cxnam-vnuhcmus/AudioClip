@@ -1,6 +1,6 @@
 {
   "Setup": {
-    "name": "Model_LLFS_FullMesh_M003",
+    "name": "Model_APL_SSN_M003",
     "suffix": "CV1",
     "batch_train": 32,
     "batch_test": 32,
@@ -14,9 +14,7 @@
     "class": "model_llfs_fullmesh.model.Model",
     "args": {
       "audio_dim": 80,
-      "lm_dim": 956,
-      "pretrained": false,
-      "infer_samples": "./assets/samples_llfs_fullmesh"
+      "lm_dim": 262
     }
   },
   "Optimizer": {
@@ -34,11 +32,10 @@
   "Dataset": {
     "class": "model_llfs_fullmesh.dataset.Dataset",
     "args": {
-      "datalist_root": "./assets/datas/M003.txt",
-      "audio_dataroot": "/home/cxnam/Documents/MEAD/{p}/audios",
-      "visual_dataroot": "/home/cxnam/Documents/MEAD/{p}/images",
-      "lm_dataroot": "/home/cxnam/Documents/MEAD/{p}/face_meshes",
-      "transcript_dataroot": "/home/cxnam/Documents/MEAD/{p}/transcripts",
+      "audio_dataroot": "{p}/audios",
+      "visual_dataroot": "{p}/images",
+      "lm_dataroot": "{p}/face_meshes",
+      "transcript_dataroot": "{p}/transcripts",
       "fps": 25,
       "sample_rate": 16000,
       "n_mels": 80,

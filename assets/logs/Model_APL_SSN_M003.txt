@@ -1,0 +1,1 @@
+Eval results - model_speechsyncnet.model.Model; ./assets/datas/M003.txt; MAE: 9.8233; MSE: 0.2241; Custom: [M-LD: 13.4847;M-LV: 10.0185;F-LD: 9.2018;F-LV: 7.3541]

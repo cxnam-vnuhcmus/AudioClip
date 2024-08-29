@@ -10,8 +10,12 @@ from typing import Union
 from .audio_encoder import AudioEncoder
 from .landmark_encoder import LandmarkEncoder
 from .landmark_decoder import LandmarkDecoder
-from .utils import plot_landmark_connections
 from .loss import CustomLoss
+from .utils import plot_landmark_connections, calculate_LMD
+from .utils import FACEMESH_ROI_IDX, FACEMESH_LIPS_IDX, FACEMESH_FACES_IDX
+mapped_lips_indices = [FACEMESH_ROI_IDX.index(i) for i in FACEMESH_LIPS_IDX]
+mapped_faces_indices = [FACEMESH_ROI_IDX.index(i) for i in FACEMESH_FACES_IDX]
+
 
 class Model(nn.Module):
 
@@ -117,6 +121,14 @@ class Model(nn.Module):
                 output_file = os.path.join(save_folder, f'landmarks_{i}.png')
                 gt_lm = gt_landmark[i]
                 pred_lm = pred_landmark[i]
+                
+                y_pred_faces = pred_lm[mapped_faces_indices, :] * 256.
+                y_faces = gt_lm[mapped_faces_indices, :] * 256.
+                fld_score = calculate_LMD(y_pred_faces, y_faces)
+                    
+                y_pred_lips = pred_lm[mapped_lips_indices, :] * 256.
+                y_lips = gt_lm[mapped_lips_indices, :] * 256.
+                mld_score = calculate_LMD(y_pred_lips, y_lips)
 
                 # Chuyển đổi tọa độ landmark từ khoảng (0, 1) về kích thước ảnh (0, image_size)
                 gt_lm = gt_lm * image_size
@@ -156,7 +168,8 @@ class Model(nn.Module):
                 axes[2].imshow(combined_image[:, image_size*2:image_size*3, :])
                 axes[2].scatter(gt_lm[:, 0], gt_lm[:, 1], color='green', label='Ground Truth', s=2)
                 axes[2].scatter(pred_lm[:, 0], pred_lm[:, 1], color='red', label='Prediction', s=2)
-                axes[2].set_title('GT (Green) vs Prediction (Red)')
+                # axes[2].set_title('GT (Green) vs Prediction (Red)')
+                axes[2].set_title(f'[M-LD: {mld_score:0.4f};F-LD: {fld_score:0.4f};]')
                 axes[2].axis('off')
 
                 # Lưu ảnh vào file
