@@ -62,9 +62,7 @@ class Dataset(td.Dataset):
         
         
         if os.path.isdir(self.data_file):
-            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.data_file))]
-            end_index = int(len(persons) * 0.8)
-            persons = persons[:end_index]
+            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.data_file))][:20]
             data_path = os.path.join(self.data_file,'{p}.txt')
         else:
             persons, _ = os.path.splitext(os.path.basename(self.data_file))   

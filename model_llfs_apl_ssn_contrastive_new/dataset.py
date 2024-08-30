@@ -62,7 +62,7 @@ class Dataset(td.Dataset):
         
         
         if os.path.isdir(self.data_file):
-            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.data_file))][:20]
+            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.data_file))][:5]
             data_path = os.path.join(self.data_file,'{p}.txt')
         else:
             persons, _ = os.path.splitext(os.path.basename(self.data_file))   
@@ -125,9 +125,12 @@ class Dataset(td.Dataset):
                                                             win_length=self.win_length, 
                                                             hop_length=self.hop_length,
                                                             center=False)
-            mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
+            mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)            
             mel_spectrogram_db = torch.tensor(mel_spectrogram_db).T #(length, 80)
             
+            llfs = extract_llf_features(audio_data, self.sr, self.n_fft, self.win_length, self.hop_length)
+            llfs = torch.tensor(llfs).T
+
             #landmark
             lm_paths = sorted(os.listdir(lm_folder))
             
@@ -174,12 +177,13 @@ class Dataset(td.Dataset):
             lm_data_list = torch.tensor(lm_data_list) #(N, lm_points, 2)
             
             mel_segment = mel_spectrogram_db[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 80)
+            llfs_segment = llfs[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 80)
             break
         
-        return (mel_segment, lm_data_list, os.path.join(lm_folder,lm_paths[segment_start_idx + (self.n_frames + 1)//2-1]))
+        return (mel_segment, llfs_segment, lm_data_list, os.path.join(lm_folder,lm_paths[segment_start_idx + (self.n_frames + 1)//2-1]))
 
     def collate_fn(self, batch):
-        batch_audio, batch_landmark, lm_paths = zip(*batch)
+        batch_audio, batch_llfs, batch_landmark, lm_paths = zip(*batch)
         keep_ids = [idx for idx, (_, _) in enumerate(zip(batch_audio, batch_landmark))]
             
         if not all(au is None for au in batch_audio):
@@ -187,6 +191,12 @@ class Dataset(td.Dataset):
             batch_audio = torch.stack(batch_audio)
         else:
             batch_audio = None
+            
+        if not all(au is None for au in batch_llfs):
+            batch_llfs = [batch_llfs[idx] for idx in keep_ids]
+            batch_llfs = torch.stack(batch_llfs)
+        else:
+            batch_llfs = None
             
         if not all(img is None for img in batch_landmark):
             batch_landmark = [batch_landmark[idx] for idx in keep_ids]
@@ -199,4 +209,4 @@ class Dataset(td.Dataset):
         else:
             lm_paths = None
         
-        return batch_audio, batch_landmark, lm_paths
+        return batch_audio, batch_llfs, batch_landmark, lm_paths

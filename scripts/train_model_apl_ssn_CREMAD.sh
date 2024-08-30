@@ -1,10 +1,10 @@
-python main.py \
-  --config config/model-base.json \
-  --data_root /home/cxnam/Documents/CREMAD \
-  --data_file ./assets/datas_CREMAD \
-  --log_samples ./assets/samples/CREMAD/samples_base \
-  --suffix base \
-  --skip-train-val \
+# python main.py \
+#   --config config/model-base.json \
+#   --data_root /home/cxnam/Documents/CREMAD \
+#   --data_file ./assets/datas_CREMAD \
+#   --log_samples ./assets/samples/CREMAD/samples_base \
+#   --suffix base \
+#   --skip-train-val \
 
 
 

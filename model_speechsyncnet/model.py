@@ -96,7 +96,7 @@ class Model(nn.Module):
                 prv_landmark = landmark[:,i:i+seg_len-1]
                 gt_landmark = gt_landmark_backup[:,i+seg_len-1]
                 (pred_lm), _ = self(
-                    audio = audio, 
+                    audio = audio_seg, 
                     landmark = prv_landmark,
                     gt_lm = gt_landmark
                 )
@@ -108,10 +108,11 @@ class Model(nn.Module):
         with torch.no_grad():
             audio, landmark, lm_paths = batch
             seg_len = (landmark.shape[1] + 1)//2
+            audio_seg = audio[:,:seg_len]
             prv_landmark = landmark[:,:seg_len-1]
             gt_landmark = landmark[:,seg_len-1]
             (pred_landmark), _ = self(
-                audio = audio, 
+                audio = audio_seg, 
                 landmark = prv_landmark,
                 gt_lm = gt_landmark
             )
