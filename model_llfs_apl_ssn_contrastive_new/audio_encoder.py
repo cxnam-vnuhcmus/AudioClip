@@ -81,4 +81,4 @@ class AudioEncoder(nn.Module):
 
         # Kết quả cuối cùng
         output = self.fc(lstm2_output)
-        return output, attn
+        return output

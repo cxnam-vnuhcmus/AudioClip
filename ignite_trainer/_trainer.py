@@ -218,7 +218,7 @@ def run(experiment_name: str,
         handler = Checkpoint(
             {'model': model, 'optimizer': optimizer, 'trainer': trainer},
             DiskSaver(f'{saved_models_path}/checkpoints', create_dir=True, require_empty=False),
-            n_saved=2,  # Số lượng checkpoint cần lưu
+            n_saved=1,  # Số lượng checkpoint cần lưu
             filename_prefix=f'checkpoint_{setup_suffix}',
             global_step_transform=lambda e, _: e.state.epoch  # Sử dụng số epoch làm global step
         )
@@ -263,7 +263,7 @@ def run(experiment_name: str,
                         engine.state.epoch, num_iter, len(train_loader), engine.state.output
                     )
                 )
-
+                
             if early_stop:
                 tqdm.tqdm.write(colored('Early stopping due to invalid loss value.', 'red'))
                 trainer.terminate()
@@ -485,7 +485,7 @@ def run_evaluation(experiment_name: str,
                 'optimizer': optimizer
             }, checkpoint=checkpoint)
             print(f"Load checkpoint: {model_args['pretrained']}")
-         
+
         prog_bar_validation = tqdm.tqdm(
             eval_loader,
             desc=f'Evaluation',
@@ -508,7 +508,7 @@ def run_evaluation(experiment_name: str,
         
         os.makedirs(f'{saved_models_path}/logs', exist_ok=True)
         with open(f'{saved_models_path}/logs/{experiment_name}.txt', 'a') as f:
-            f.write('Eval results - {}'.format('; '.join(tqdm_info)))
+            f.write('Eval results - {}\n'.format('; '.join(tqdm_info)))
         
         del train_loader
         del eval_loader
@@ -532,6 +532,7 @@ def main():
         parser.add_argument('-S', '--skip-train-val', action='store_true', default=False)
         parser.add_argument('-d', '--data_root', type=str, required=True)
         parser.add_argument('-f', '--data_file', type=str, required=True)
+        parser.add_argument('--n_folders', type=int, required=False)
         parser.add_argument('--log_samples', type=str, required=False)
         parser.add_argument('--evaluation', action='store_true', default=False)
         parser.add_argument('--pretrained', type=str, required=False)
@@ -681,6 +682,7 @@ def main():
             dataset_args = config['Dataset']['args']
             dataset_args["data_root"] = args.data_root
             dataset_args["data_file"] = args.data_file
+            dataset_args["n_folders"] = args.n_folders
 
             transforms = config['Transforms']
             performance_metrics = config['Metrics']

@@ -18,6 +18,7 @@ class Dataset(td.Dataset):
     def __init__(self, 
                  data_root: str,
                  data_file: str,
+                 n_folders: int,
                  audio_dataroot: str,
                  visual_dataroot: str,
                  transcript_dataroot: str, 
@@ -62,7 +63,7 @@ class Dataset(td.Dataset):
         
         
         if os.path.isdir(self.data_file):
-            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.data_file))][:20]
+            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.data_file))][:n_folders]
             data_path = os.path.join(self.data_file,'{p}.txt')
         else:
             persons, _ = os.path.splitext(os.path.basename(self.data_file))   
@@ -96,7 +97,7 @@ class Dataset(td.Dataset):
             lm_p = self.lm_dataroot.format(p=p)
             transcript_p = self.transcript_dataroot.format(p=p)
             
-            audio_name = os.path.join(audio_p, f'{line}.wav')
+            audio_name = os.path.join(audio_p, f'{line}.json')
             lm_folder = os.path.join(lm_p, line)
             
             all_datas.append((audio_name, lm_folder))
@@ -117,16 +118,20 @@ class Dataset(td.Dataset):
             (audio_name, lm_folder) = self.all_datas[idx]
 
             #audio
-            audio_data, _ = librosa.load(audio_name, sr=self.sr)
-            mel_spectrogram = librosa.feature.melspectrogram(y=audio_data, 
-                                                            sr=self.sr, 
-                                                            n_mels=self.n_mels, 
-                                                            n_fft=self.n_fft,
-                                                            win_length=self.win_length, 
-                                                            hop_length=self.hop_length,
-                                                            center=False)
-            mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
-            mel_spectrogram_db = torch.tensor(mel_spectrogram_db).T #(length, 80)
+            # audio_data, _ = librosa.load(audio_name, sr=self.sr)
+            # mel_spectrogram = librosa.feature.melspectrogram(y=audio_data, 
+            #                                                 sr=self.sr, 
+            #                                                 n_mels=self.n_mels, 
+            #                                                 n_fft=self.n_fft,
+            #                                                 win_length=self.win_length, 
+            #                                                 hop_length=self.hop_length,
+            #                                                 center=False)
+            # mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
+            # mel_spectrogram_db = torch.tensor(mel_spectrogram_db).T #(length, 80)
+            with open(audio_name, "r") as f:
+                data = json.load(f)
+            mel_spectrogram_db = torch.tensor(data["mel_spectrogram_db"])
+            # llfs = torch.tensor(data["llfs"])
             
             #landmark
             lm_paths = sorted(os.listdir(lm_folder))
@@ -153,7 +158,7 @@ class Dataset(td.Dataset):
                 for segment_start_idx in idx:
                     idx_found = True
                     for i in range(segment_start_idx, segment_start_idx + self.n_frames):
-                        if not os.path.exists(os.path.join(lm_folder,lm_paths[i])):
+                        if not os.path.exists(os.path.join(lm_folder,lm_paths[i])) or not os.path.exists(os.path.join(lm_folder,lm_paths[i]).replace(".json", ".jpg").replace("face_meshes", "images")):
                             idx_found = False
                             break
                     if idx_found:

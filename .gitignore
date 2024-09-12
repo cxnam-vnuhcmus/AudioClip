@@ -108,3 +108,6 @@ dmypy.json
 **/tb_logs/
 **/*.pth
 **/landmarks_*.png
+assets/**/*.jpg
+loss_chamfer.txt
+inference/**/*.jpg

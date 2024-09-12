@@ -35,55 +35,64 @@ python main.py \
   --evaluation
 
 python main.py \
-  --config Trainer/config/model-apl-ssn-concate.json \
+  --config ./config/model-apl-ssn-concate.json \
   --data_root /home/cxnam/Documents/MEAD \
   --data_file ./assets/datas/M003.txt \
   --log_samples ./assets/samples/M003/samples_apl_concate \
   --skip-train-val \
-  --pretrained Trainer/assets/checkpoints/cp_20_apl_ssn_concate.pt \
+  --pretrained ./assets/checkpoints/cp_20_apl_ssn_concate.pt \
   --evaluation
 
 python main.py \
-  --config Trainer/config/model-apl-ssn-contrastive.json \
+  --config ./config/model-apl-ssn-contrastive.json \
   --data_root /home/cxnam/Documents/MEAD \
   --data_file ./assets/datas/M003.txt \
   --log_samples ./assets/samples/M003/samples_apl_ssn_contrastive \
   --skip-train-val \
-  --pretrained Trainer/assets/checkpoints/cp_20_apl_ssn_contrastive.pt \
+  --pretrained ./assets/checkpoints/cp_20_apl_ssn_contrastive.pt \
   --evaluation
 
 python main.py \
-  --config Trainer/config/model-apl-ssn-concate-contrastive.json \
+  --config ./config/model-apl-ssn-concate-contrastive.json \
   --data_root /home/cxnam/Documents/MEAD \
   --data_file ./assets/datas/M003.txt \
   --log_samples ./assets/samples/M003/samples_apl_ssn_concate_contrastive \
   --skip-train-val \
-  --pretrained Trainer/assets/checkpoints/cp_20_apl_ssn_concate_contrastive.pt \
+  --pretrained ./assets/checkpoints/cp_20_apl_ssn_concate_contrastive.pt \
   --evaluation
 
 python main.py \
-  --config Trainer/config/model-concate.json \
+  --config ./config/model-concate.json \
   --data_root /home/cxnam/Documents/MEAD \
   --data_file ./assets/datas/M003.txt \
   --log_samples ./assets/samples/M003/samples_concate \
   --skip-train-val \
-  --pretrained Trainer/assets/checkpoints/cp_20_concate.pt \
+  --pretrained ./assets/checkpoints/cp_20_concate.pt \
   --evaluation
 
 python main.py \
-  --config Trainer/config/model-contrastive.json \
+  --config ./config/model-contrastive.json \
   --data_root /home/cxnam/Documents/MEAD \
   --data_file ./assets/datas/M003.txt \
   --log_samples ./assets/samples/M003/samples_contrastive \
   --skip-train-val \
-  --pretrained Trainer/assets/checkpoints/cp_20_contrastive.pt \
+  --pretrained ./assets/checkpoints/cp_20_contrastive.pt \
   --evaluation
 
 python main.py \
-  --config Trainer/config/model-contrastive-concate.json \
+  --config ./config/model-contrastive-concate.json \
   --data_root /home/cxnam/Documents/MEAD \
   --data_file ./assets/datas/M003.txt \
   --log_samples ./assets/samples/M003/samples_concate_contrastive \
   --skip-train-val \
-  --pretrained Trainer/assets/checkpoints/cp_20_contrastive_concate.pt \
+  --pretrained ./assets/checkpoints/cp_20_contrastive_concate.pt \
+  --evaluation
+
+python main.py \
+  --config ./config/model-llfs-apl-ssn-contrastive-new.json \
+  --data_root /home/cxnam/Documents/MEAD \
+  --data_file ./assets/datas/M003.txt \
+  --log_samples ./assets/samples/M003/samples_llfs_apl_ssn_contrastive_new_2 \
+  --skip-train-val \
+  --pretrained ./assets/checkpoints/checkpoint_M003_llfs_apl_ssn_contrastive_new_2_checkpoint_20.pt \
   --evaluation

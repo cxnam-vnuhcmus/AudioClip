@@ -1,11 +1,10 @@
-# python main.py \
-#   --config config/model-base.json \
-#   --data_root /home/cxnam/Documents/CREMAD \
-#   --data_file ./assets/datas_CREMAD \
-#   --log_samples ./assets/samples/CREMAD/samples_base \
-#   --suffix base \
-#   --skip-train-val \
-
+python main.py \
+  --config config/model-base.json \
+  --data_root /home/cxnam/Documents/CREMAD \
+  --data_file ./assets/datas_CREMAD \
+  --log_samples ./assets/samples/CREMAD/samples_base \
+  --suffix CREMAD_base \
+  --skip-train-val \
 
 
 python main.py \
@@ -13,7 +12,7 @@ python main.py \
   --data_root /home/cxnam/Documents/CREMAD \
   --data_file ./assets/datas_CREMAD \
   --log_samples ./assets/samples/CREMAD/samples_apl \
-  --suffix apl \
+  --suffix CREMAD_apl \
   --skip-train-val \
   
 
@@ -22,7 +21,7 @@ python main.py \
   --data_root /home/cxnam/Documents/CREMAD \
   --data_file ./assets/datas_CREMAD \
   --log_samples ./assets/samples/CREMAD/samples_ssn \
-  --suffix ssn \
+  --suffix CREMAD_ssn \
   --skip-train-val \
   
 
@@ -31,60 +30,69 @@ python main.py \
   --data_root /home/cxnam/Documents/CREMAD \
   --data_file ./assets/datas_CREMAD \
   --log_samples ./assets/samples/CREMAD/samples_apl_ssn \
-  --suffix apl_ssn \
+  --suffix CREMAD_apl_ssn \
   --skip-train-val \
   
 
 python main.py \
-  --config Trainer/config/model-apl-ssn-concate.json \
+  --config ./config/model-apl-ssn-concate.json \
   --data_root /home/cxnam/Documents/CREMAD \
   --data_file ./assets/datas_CREMAD \
   --log_samples ./assets/samples/CREMAD/samples_apl_ssn_concate \
-  --suffix apl_ssn_concate \
+  --suffix CREMAD_apl_ssn_concate \
   --skip-train-val \
 
 
 python main.py \
-  --config Trainer/config/model-apl-ssn-contrastive.json \
+  --config ./config/model-apl-ssn-contrastive.json \
   --data_root /home/cxnam/Documents/CREMAD \
   --data_file ./assets/datas_CREMAD \
   --log_samples ./assets/samples/CREMAD/samples_apl_ssn_contrastive \
-  --suffix apl_ssn_contrastive \
+  --suffix CREMAD_apl_ssn_contrastive \
   --skip-train-val \
 
 
 python main.py \
-  --config Trainer/config/model-apl-ssn-concate-contrastive.json \
+  --config ./config/model-apl-ssn-concate-contrastive.json \
   --data_root /home/cxnam/Documents/CREMAD \
   --data_file ./assets/datas_CREMAD \
   --log_samples ./assets/samples/CREMAD/samples_apl_ssn_concate_contrastive \
-  --suffix apl_ssn_concate_contrastive \
+  --suffix CREMAD_apl_ssn_concate_contrastive \
   --skip-train-val \
 
 
 python main.py \
-  --config Trainer/config/model-concate.json \
+  --config ./config/model-concate.json \
   --data_root /home/cxnam/Documents/CREMAD \
   --data_file ./assets/datas_CREMAD \
   --log_samples ./assets/samples/CREMAD/samples_concate \
-  --suffix concate \
+  --suffix CREMAD_concate \
   --skip-train-val \
 
 
 python main.py \
-  --config Trainer/config/model-contrastive.json \
+  --config ./config/model-contrastive.json \
   --data_root /home/cxnam/Documents/CREMAD \
   --data_file ./assets/datas_CREMAD \
   --log_samples ./assets/samples/CREMAD/samples_contrastive \
-  --suffix contrastive \
+  --suffix CREMAD_contrastive \
   --skip-train-val \
 
 
 python main.py \
-  --config Trainer/config/model-contrastive-concate.json \
+  --config ./config/model-contrastive-concate.json \
   --data_root /home/cxnam/Documents/CREMAD \
   --data_file ./assets/datas_CREMAD \
   --log_samples ./assets/samples/CREMAD/samples_concate_contrastive \
-  --suffix concate_contrastive \
+  --suffix CREMAD_concate_contrastive \
   --skip-train-val \
+
+python main.py \
+  --config ./config/model-llfs-apl-ssn-contrastive-new.json \
+  --data_root /home/cxnam/Documents/CREMAD \
+  --data_file ./assets/datas_CREMAD \
+  --log_samples ./assets/samples/CREMAD/samples_llfs_apl_ssn_contrastive_new_2 \
+  --suffix CREMAD_llfs_apl_ssn_contrastive_new_2 \
+  --skip-train-val
+
 
