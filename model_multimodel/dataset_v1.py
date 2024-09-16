@@ -18,6 +18,7 @@ class Dataset(td.Dataset):
     def __init__(self, 
                  data_root: str,
                  data_file: str,
+                 n_folders: int,
                  audio_dataroot: str,
                  visual_dataroot: str,
                  transcript_dataroot: str, 
@@ -62,7 +63,7 @@ class Dataset(td.Dataset):
         
         
         if os.path.isdir(self.data_file):
-            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.data_file))][:5]
+            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.data_file))][:n_folders]
             data_path = os.path.join(self.data_file,'{p}.txt')
         else:
             persons, _ = os.path.splitext(os.path.basename(self.data_file))   
@@ -133,15 +134,15 @@ class Dataset(td.Dataset):
             
             with open(audio_name, "r") as f:
                 data = json.load(f)
-            # mel_spectrogram_db = torch.tensor(data["mel_spectrogram_db"])
-            llfs = torch.tensor(data["llfs"])   
+            mel_spectrogram_db = torch.tensor(data["mel_spectrogram_db"])
+            llfs = torch.tensor(data["llfs"])     
+            mfcc = torch.tensor(data["mfcc"])     
 
-            
             #landmark
             lm_paths = sorted(os.listdir(lm_folder))
             
             #random segment
-            max_len = min(llfs.shape[0], len(lm_paths))
+            max_len = min(mel_spectrogram_db.shape[0], len(lm_paths))
             if max_len < self.n_frames:
                 idx = random.randint(0, len(self.all_datas))
                 continue
@@ -162,7 +163,7 @@ class Dataset(td.Dataset):
                 for segment_start_idx in idx:
                     idx_found = True
                     for i in range(segment_start_idx, segment_start_idx + self.n_frames):
-                        if not os.path.exists(os.path.join(lm_folder,lm_paths[i])):
+                        if not os.path.exists(os.path.join(lm_folder,lm_paths[i])) or not os.path.exists(os.path.join(lm_folder,lm_paths[i]).replace(".json", ".jpg").replace("face_meshes", "images")):
                             idx_found = False
                             break
                     if idx_found:
@@ -182,14 +183,15 @@ class Dataset(td.Dataset):
             lm_data_list = np.stack(lm_data_list, axis=0)
             lm_data_list = torch.tensor(lm_data_list) #(N, lm_points, 2)
             
-            mel_segment = llfs[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 80)
-            
+            # mel_segment = mel_spectrogram_db[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 128)
+            llfs_segment = llfs[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 32)
+            mfcc_segment = mfcc[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 40)
             break
         
-        return (mel_segment, lm_data_list, os.path.join(lm_folder,lm_paths[segment_start_idx + (self.n_frames + 1)//2-1]))
+        return (mfcc_segment, llfs_segment, lm_data_list, os.path.join(lm_folder,lm_paths[segment_start_idx + (self.n_frames + 1)//2-1]))
 
     def collate_fn(self, batch):
-        batch_audio, batch_landmark, lm_paths = zip(*batch)
+        batch_audio, batch_llfs, batch_landmark, lm_paths = zip(*batch)
         keep_ids = [idx for idx, (_, _) in enumerate(zip(batch_audio, batch_landmark))]
             
         if not all(au is None for au in batch_audio):
@@ -198,15 +200,21 @@ class Dataset(td.Dataset):
         else:
             batch_audio = None
             
+        if not all(au is None for au in batch_llfs):
+            batch_llfs = [batch_llfs[idx] for idx in keep_ids]
+            batch_llfs = torch.stack(batch_llfs)
+        else:
+            batch_llfs = None
+            
         if not all(img is None for img in batch_landmark):
             batch_landmark = [batch_landmark[idx] for idx in keep_ids]
             batch_landmark = torch.stack(batch_landmark, dim=0)
         else:
             batch_landmark = None
-            
+        
         if not all(img is None for img in lm_paths):
             lm_paths = [lm_paths[idx] for idx in keep_ids]
         else:
             lm_paths = None
         
-        return batch_audio, batch_landmark, lm_paths
+        return batch_audio, batch_llfs, batch_landmark, lm_paths

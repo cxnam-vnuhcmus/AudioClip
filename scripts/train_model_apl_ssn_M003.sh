@@ -1,29 +1,31 @@
 python main.py \
   --config config/model-base.json \
   --data_root /home/cxnam/Documents/MEAD \
-  --data_file ./assets/datas/M003.txt \
-  --log_samples ./assets/samples/M003/samples_base \
-  --suffix M003_base \
+  --data_file ./assets/datas \
+  --suffix MEAD_base_mse_mfcc \
   --skip-train-val \
+  --n_folders 10 
+
 
 
 
 python main.py \
   --config config/model-apl.json \
   --data_root /home/cxnam/Documents/MEAD \
-  --data_file ./assets/datas/M003.txt \
-  --log_samples ./assets/samples/M003/samples_apl \
-  --suffix M003_apl \
+  --data_file ./assets/datas \
+  --suffix MEAD_apl_mfcc \
   --skip-train-val \
+  --n_folders 10 \
+  --log_samples ./assets/samples/M003/samples_apl \
   
 
 python main.py \
   --config config/model-speechsyncnet.json \
   --data_root /home/cxnam/Documents/MEAD \
   --data_file ./assets/datas/M003.txt \
-  --log_samples ./assets/samples/M003/samples_ssn \
-  --suffix M003_ssn \
+  --suffix M003_ssn_v2 \
   --skip-train-val \
+  --log_samples ./assets/samples/M003/samples_ssn_v2 \
   
 
 python main.py \
@@ -91,9 +93,18 @@ python main.py \
 
 
 python main.py \
-  --config ./config/model-llfs-apl-ssn-contrastive-new.json \
+  --config ./config/model-multimodel.json \
   --data_root /home/cxnam/Documents/MEAD \
-  --data_file ./assets/datas/M003.txt \
-  --log_samples ./assets/samples/M003/samples_llfs_apl_ssn_contrastive_v4 \
-  --suffix M003_llfs_apl_ssn_contrastive_v4 \
+  --data_file ./assets/datas \
+  --suffix MEAD_multimodel_v1 \
   --skip-train-val \
+  --n_folders 10
+
+python main.py \
+  --config config/model-speechsyncnet.json \
+  --data_root /home/cxnam/Documents/MEAD \
+  --data_file ./assets/datas \
+  --suffix MEAD_ssn_v2 \
+  --skip-train-val \
+  --n_folders 10
+

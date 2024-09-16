@@ -209,18 +209,18 @@ class Model(nn.Module):
                 # combined_image[:, image_size*2:image_size*3, :] = background
 
                 # Tạo subplots
-                fig, axes = plt.subplots(1, 3, figsize=(12, 4))
+                fig, axes = plt.subplots(1, 3, figsize=(12, 4), gridspec_kw={'wspace': 0, 'hspace': 0})
 
                 # Phần 1: Ảnh background + Ground Truth
                 axes[0].imshow(combined_image[:, :image_size, :])
                 plot_landmark_connections(axes[0], gt_lm, 'green')
-                axes[0].set_title('Ground Truth')
+                # axes[0].set_title('Ground Truth')
                 axes[0].axis('off')
 
                 # Phần 2: Ảnh background + Prediction
                 axes[1].imshow(combined_image[:, image_size:image_size*2, :])
                 plot_landmark_connections(axes[1], pred_lm, 'red')
-                axes[1].set_title('Prediction')
+                # axes[1].set_title('Prediction')
                 axes[1].axis('off')
 
                 # Phần 3: Ảnh Ground Truth (đỏ) và Prediction (xanh dương)
@@ -228,9 +228,14 @@ class Model(nn.Module):
                 axes[2].scatter(gt_lm[:, 0], gt_lm[:, 1], color='green', label='Ground Truth', s=2)
                 axes[2].scatter(pred_lm[:, 0], pred_lm[:, 1], color='red', label='Prediction', s=2)
                 # axes[2].set_title('GT (Green) vs Prediction (Red)')
-                axes[2].set_title(f'[M-LD: {mld_score:0.4f};F-LD: {fld_score:0.4f};]')
+                # axes[2].set_title(f'[M-LD: {mld_score:0.4f};F-LD: {fld_score:0.4f};]')
                 axes[2].axis('off')
+                
+                # Add text on top of the image
+                title_text = f'[M-LD: {mld_score:0.4f}; F-LD: {fld_score:0.4f}]'
+                axes[2].text(20, 20, title_text, fontsize=12, color='black', bbox=dict(facecolor='white', edgecolor='none', alpha=1.0))
+
 
                 # Lưu ảnh vào file
-                plt.savefig(output_file, bbox_inches='tight')
+                plt.savefig(output_file, bbox_inches='tight', pad_inches=0)
                 plt.close()

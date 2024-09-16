@@ -1,29 +1,33 @@
 python main.py \
   --config config/model-base.json \
   --data_root /home/cxnam/Documents/MEAD \
-  --data_file ./assets/datas/M003.txt \
-  --log_samples ./assets/samples/M003/samples_base \
+  --data_file ./assets/datas/M030.txt \
   --skip-train-val \
-  --pretrained ./assets/checkpoints/cp_20_base.pt \
-  --evaluation
+  --pretrained ./assets/checkpoints/checkpoint_M003_base_mse_checkpoint_20.pt \
+  --evaluation \
+  --n_folders 10 \
+  --log_samples ./assets/samples/MEAD/samples_base_mse
 
 python main.py \
   --config config/model-apl.json \
   --data_root /home/cxnam/Documents/MEAD \
   --data_file ./assets/datas/M003.txt \
-  --log_samples ./assets/samples/M003/samples_apl \
   --skip-train-val \
-  --pretrained ./assets/checkpoints/cp_20_apl_v2.pt \
-  --evaluation
+  --pretrained ./assets/checkpoints/checkpoint_MEAD_apl_mse_checkpoint_20.pt \
+  --evaluation \
+  --n_folders 10 \
+  --log_samples ./assets/samples/MEAD/samples_apl_mse
 
 python main.py \
   --config config/model-speechsyncnet.json \
   --data_root /home/cxnam/Documents/MEAD \
   --data_file ./assets/datas/M003.txt \
-  --log_samples ./assets/samples/M003/samples_ssn \
   --skip-train-val \
-  --pretrained ./assets/checkpoints/cp_20_speechsyncnet.pt \
-  --evaluation
+  --pretrained ./assets/checkpoints/checkpoint_MEAD_ssn_mse_checkpoint_20.pt \
+  --evaluation \
+  --n_folders 10 \
+  --log_samples ./assets/samples/M003/samples_ssn_mse
+
 
 python main.py \
   --config config/model-apl-speechsyncnet.json \
@@ -89,10 +93,31 @@ python main.py \
   --evaluation
 
 python main.py \
-  --config ./config/model-llfs-apl-ssn-contrastive-new.json \
+  --config ./config/model-mouth.json \
   --data_root /home/cxnam/Documents/MEAD \
   --data_file ./assets/datas/M003.txt \
-  --log_samples ./assets/samples/M003/samples_llfs_apl_ssn_contrastive_new_2 \
   --skip-train-val \
-  --pretrained ./assets/checkpoints/checkpoint_M003_llfs_apl_ssn_contrastive_new_2_checkpoint_20.pt \
-  --evaluation
+  --pretrained ./assets/checkpoints/checkpoint_M003_mouth_checkpoint_20.pt \
+  --evaluation \
+  --n_folders 10 \
+  --log_samples ./assets/samples/MEAD/samples_multimodel_mse
+
+python main.py \
+  --config ./config/model-llfs-only.json \
+  --data_root /home/cxnam/Documents/MEAD \
+  --data_file ./assets/datas/M003.txt \
+  --skip-train-val \
+  --pretrained ./assets/checkpoints/cp_20_llfs_only.pt \
+  --evaluation \
+  --n_folders 10 \
+  --log_samples ./assets/samples/M003/samples_llf_only
+
+python main.py \
+  --config ./config/model-base.json \
+  --data_root /home/cxnam/Documents/MEAD \
+  --data_file ./assets/datas/M030.txt \
+  --skip-train-val \
+  --pretrained ./assets/checkpoints/checkpoint_MEAD_base_mse_mfcc_checkpoint_20.pt \
+  --evaluation \
+  --n_folders 10 \
+  --log_samples ./assets/samples/M003/samples_base_mse_mfcc

@@ -140,5 +140,5 @@ class CustomLoss(nn.Module):
         
         # # Tổng hợp các mất mát với trọng số
         # total_loss = self.alpha * mae_loss + self.beta * chamfer_loss + self.gamma * emd_loss
-        return mse_loss
+        return mse_loss 
 

@@ -17,7 +17,6 @@ mapped_lips_indices = [FACEMESH_ROI_IDX.index(i) for i in FACEMESH_LIPS_IDX]
 mapped_faces_indices = [FACEMESH_ROI_IDX.index(i) for i in FACEMESH_FACES_IDX]
 
 
-
 class Model(nn.Module):
 
     def __init__(self,
@@ -34,8 +33,8 @@ class Model(nn.Module):
         self.lm_dim = lm_dim
         
         self.audio = AudioEncoder(dim_in=40)
-        self.landmark = LandmarkEncoder(input_size=(131, 2), output_size=128, hidden_size=256)
-        self.decoder = LandmarkDecoder(output_dim=self.lm_dim)
+        self.landmark = LandmarkEncoder(input_dim=91*2, hidden_dim=128, output_dim=128, num_heads=8, num_layers=3)
+        self.decoder = LandmarkDecoder(output_dim=91*2)
         
         self.criterion = CustomLoss(alpha=1.0, beta=0.5, gamma=0.5)
 
@@ -182,4 +181,3 @@ class Model(nn.Module):
                 # Lưu ảnh vào file
                 plt.savefig(output_file, bbox_inches='tight', pad_inches=0)
                 plt.close()
- 

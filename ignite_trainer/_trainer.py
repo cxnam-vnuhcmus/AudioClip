@@ -259,10 +259,11 @@ def run(experiment_name: str,
 
             if num_iter % log_interval == 0 or num_iter == len(train_loader) or early_stop:
                 tqdm.tqdm.write(
-                    'Epoch[{}] Iteration[{}/{}] Loss: {:.4f}'.format(
+                    'Epoch[{}] Iteration[{}/{}] Loss: {:.8f}'.format(
                         engine.state.epoch, num_iter, len(train_loader), engine.state.output
                     )
                 )
+                
                 
             if early_stop:
                 tqdm.tqdm.write(colored('Early stopping due to invalid loss value.', 'red'))
@@ -302,9 +303,9 @@ def run(experiment_name: str,
                     tqdm_info.append('{}: {:.4f}'.format(metric_label, validator.state.metrics[metric_label]))
             tqdm.tqdm.write('{} results - {}'.format(run_type, '; '.join(tqdm_info)))
             
-            # os.makedirs(f'{saved_models_path}/logs', exist_ok=True)
-            # with open(f'{saved_models_path}/logs/{experiment_name}.txt', 'a') as f:
-            #     f.write('{} results - {}\n'.format(run_type, '; '.join(tqdm_info)))
+            os.makedirs(f'{saved_models_path}/logs', exist_ok=True)
+            with open(f'{saved_models_path}/logs/{experiment_name}.txt', 'a') as f:
+                f.write('{} results - {}\n'.format(run_type, '; '.join(tqdm_info)))
         
         if not skip_train_val:
             @trainer.on(ieng.Events.EPOCH_COMPLETED)

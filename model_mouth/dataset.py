@@ -11,13 +11,14 @@ import cv2
 import librosa
 from PIL import Image
 import torchvision.transforms as T
-from .utils import FACEMESH_ROI_IDX, extract_llf_features
+from .utils import FACEMESH_LIPS_IDX, extract_llf_features
 
 class Dataset(td.Dataset):
 
     def __init__(self, 
                  data_root: str,
                  data_file: str,
+                 n_folders: int,
                  audio_dataroot: str,
                  visual_dataroot: str,
                  transcript_dataroot: str, 
@@ -62,7 +63,7 @@ class Dataset(td.Dataset):
         
         
         if os.path.isdir(self.data_file):
-            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.data_file))][:5]
+            persons = [os.path.splitext(p)[0] for p in sorted(os.listdir(self.data_file))][:n_folders]
             data_path = os.path.join(self.data_file,'{p}.txt')
         else:
             persons, _ = os.path.splitext(os.path.basename(self.data_file))   
@@ -125,23 +126,18 @@ class Dataset(td.Dataset):
             #                                                 win_length=self.win_length, 
             #                                                 hop_length=self.hop_length,
             #                                                 center=False)
-            # mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)            
+            # mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
             # mel_spectrogram_db = torch.tensor(mel_spectrogram_db).T #(length, 80)
-            
-            # llfs = extract_llf_features(audio_data, self.sr, self.n_fft, self.win_length, self.hop_length)
-            # llfs = torch.tensor(llfs).T
-            
             with open(audio_name, "r") as f:
                 data = json.load(f)
-            # mel_spectrogram_db = torch.tensor(data["mel_spectrogram_db"])
-            llfs = torch.tensor(data["llfs"])   
-
+            mel_spectrogram_db = torch.tensor(data["mfcc"])
+            # llfs = torch.tensor(data["llfs"])
             
             #landmark
             lm_paths = sorted(os.listdir(lm_folder))
             
             #random segment
-            max_len = min(llfs.shape[0], len(lm_paths))
+            max_len = min(mel_spectrogram_db.shape[0], len(lm_paths))
             if max_len < self.n_frames:
                 idx = random.randint(0, len(self.all_datas))
                 continue
@@ -157,12 +153,12 @@ class Dataset(td.Dataset):
                             break
             else:
                 random.seed(0)
-                idx = list(range(max_len - self.n_frames))
-                random.shuffle(idx)
-                for segment_start_idx in idx:
+                seg_idx = list(range(max_len - self.n_frames))
+                random.shuffle(seg_idx)
+                for segment_start_idx in seg_idx:
                     idx_found = True
                     for i in range(segment_start_idx, segment_start_idx + self.n_frames):
-                        if not os.path.exists(os.path.join(lm_folder,lm_paths[i])):
+                        if not os.path.exists(os.path.join(lm_folder,lm_paths[i])) or not os.path.exists(os.path.join(lm_folder,lm_paths[i]).replace(".json", ".jpg").replace("face_meshes", "images")):
                             idx_found = False
                             break
                     if idx_found:
@@ -173,8 +169,8 @@ class Dataset(td.Dataset):
                 with open(os.path.join(lm_folder,lm_paths[i]), "r") as f:
                     lm_data = json.load(f)
                     lm_roi = []
-                    for i in FACEMESH_ROI_IDX:
-                        lm_roi.append(lm_data[i])
+                    for j in FACEMESH_LIPS_IDX:
+                        lm_roi.append(lm_data[j])
                     lm_roi = np.asarray(lm_roi)
                     lm_roi = torch.FloatTensor(lm_roi)
                     lm_roi = lm_roi / 256.0
@@ -182,8 +178,7 @@ class Dataset(td.Dataset):
             lm_data_list = np.stack(lm_data_list, axis=0)
             lm_data_list = torch.tensor(lm_data_list) #(N, lm_points, 2)
             
-            mel_segment = llfs[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 80)
-            
+            mel_segment = mel_spectrogram_db[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 80)
             break
         
         return (mel_segment, lm_data_list, os.path.join(lm_folder,lm_paths[segment_start_idx + (self.n_frames + 1)//2-1]))
@@ -203,7 +198,7 @@ class Dataset(td.Dataset):
             batch_landmark = torch.stack(batch_landmark, dim=0)
         else:
             batch_landmark = None
-            
+        
         if not all(img is None for img in lm_paths):
             lm_paths = [lm_paths[idx] for idx in keep_ids]
         else:

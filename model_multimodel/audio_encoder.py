@@ -72,13 +72,13 @@ class AudioEncoder(nn.Module):
         
         # LSTM1 với kết nối tắt
         attention_output_proj = self.fc_attention(attention_output)  # (batch_size, num_frames, hidden_size1)
-        #lstm1_output, _ = self.lstm1(attention_output_proj)
-        #lstm1_output = lstm1_output + attention_output_proj  # Kết nối tắt
+        lstm1_output, _ = self.lstm1(attention_output_proj)
+        lstm1_output = lstm1_output + attention_output_proj  # Kết nối tắt
 
         # LSTM2 với kết nối tắt
-        #lstm2_output, _ = self.lstm2(lstm1_output)
-        #lstm2_output = lstm2_output + lstm1_output  # Kết nối tắt
+        lstm2_output, _ = self.lstm2(lstm1_output)
+        lstm2_output = lstm2_output + lstm1_output  # Kết nối tắt
 
         # Kết quả cuối cùng
-        output = self.fc(attention_output_proj)
-        return output, attn
+        output = self.fc(lstm2_output)
+        return output

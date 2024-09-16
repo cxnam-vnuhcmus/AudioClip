@@ -81,4 +81,4 @@ class AudioEncoder(nn.Module):
 
         # Kết quả cuối cùng
         output = self.fc(attention_output_proj)
-        return output, attn
+        return output
