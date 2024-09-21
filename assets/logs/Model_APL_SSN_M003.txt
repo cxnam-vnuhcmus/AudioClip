@@ -31,6 +31,7 @@ Eval. results - Epoch: 17; MAE: 8.6121; MSE: 0.1503; Custom: [M-LD: 3.3950;M-LV:
 Eval. results - Epoch: 18; MAE: 10.8248; MSE: 0.2299; Custom: [M-LD: 4.4295;M-LV: 3.0685;F-LD: 2.9188;F-LV: 2.1250]
 Eval. results - Epoch: 19; MAE: 13.1445; MSE: 0.3270; Custom: [M-LD: 4.9605;M-LV: 3.7139;F-LD: 3.6805;F-LV: 2.7957]
 Eval. results - Epoch: 20; MAE: 9.8253; MSE: 0.1931; Custom: [M-LD: 3.3553;M-LV: 2.6825;F-LD: 3.0544;F-LV: 2.4092]
+>>Multimodel with LLFs
 Eval. results - Epoch: 1; MAE: 6.9385; MSE: 0.0875; Custom: [M-LD: 2.5299;M-LV: 1.9942;F-LD: 1.9825;F-LV: 1.5459]
 Eval. results - Epoch: 2; MAE: 6.8761; MSE: 0.0862; Custom: [M-LD: 2.5793;M-LV: 2.0086;F-LD: 1.9339;F-LV: 1.5216]
 Eval. results - Epoch: 3; MAE: 6.8525; MSE: 0.0848; Custom: [M-LD: 2.6259;M-LV: 2.0287;F-LD: 1.8879;F-LV: 1.5173]
@@ -51,6 +52,7 @@ Eval. results - Epoch: 17; MAE: 5.7810; MSE: 0.0649; Custom: [M-LD: 2.2222;M-LV:
 Eval. results - Epoch: 18; MAE: 5.8402; MSE: 0.0660; Custom: [M-LD: 2.2525;M-LV: 1.8974;F-LD: 1.6194;F-LV: 1.4404]
 Eval. results - Epoch: 19; MAE: 5.7754; MSE: 0.0656; Custom: [M-LD: 2.2856;M-LV: 1.9295;F-LD: 1.5805;F-LV: 1.4373]
 Eval. results - Epoch: 20; MAE: 5.9168; MSE: 0.0666; Custom: [M-LD: 2.2800;M-LV: 1.9099;F-LD: 1.6380;F-LV: 1.4548]
+>>SSN MFCC
 Eval. results - Epoch: 1; MAE: 14.5792; MSE: 0.3506; Custom: [M-LD: 6.3337;M-LV: 3.8232;F-LD: 3.6102;F-LV: 2.3699]
 Eval. results - Epoch: 2; MAE: 10.5084; MSE: 0.1947; Custom: [M-LD: 3.8150;M-LV: 2.7032;F-LD: 2.9831;F-LV: 2.1041]
 Eval. results - Epoch: 3; MAE: 9.6051; MSE: 0.1712; Custom: [M-LD: 3.7904;M-LV: 2.7337;F-LD: 2.6601;F-LV: 1.9954]

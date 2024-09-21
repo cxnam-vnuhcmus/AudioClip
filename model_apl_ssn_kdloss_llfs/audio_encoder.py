@@ -58,8 +58,8 @@ class AudioEncoder(nn.Module):
         
         self.model = TransformerWithAttention(d_model=d_model, num_heads=num_heads, num_layers=num_layers, dropout=dropout)
         
-        self.lstm1 = nn.LSTM(input_size=hidden_size1, hidden_size=hidden_size1, num_layers=1, batch_first=True, dropout=dropout, bidirectional=False)
-        self.lstm2 = nn.LSTM(input_size=hidden_size1, hidden_size=hidden_size2, num_layers=1, batch_first=True, dropout=dropout, bidirectional=False)
+        self.lstm1 = nn.LSTM(input_size=hidden_size1, hidden_size=hidden_size1, num_layers=2, batch_first=True, dropout=dropout, bidirectional=False)
+        self.lstm2 = nn.LSTM(input_size=hidden_size1, hidden_size=hidden_size2, num_layers=2, batch_first=True, dropout=dropout, bidirectional=False)
         
         # Lớp kết nối tắt
         self.fc_attention = nn.Linear(d_model, hidden_size1)  # Đưa attention_output về kích thước hidden_size1
