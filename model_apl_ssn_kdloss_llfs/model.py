@@ -38,11 +38,9 @@ class Model(nn.Module):
         self.audio = AudioEncoder(dim_in=40)
         self.llfs = LLFEncoder(input_dim=32)
         self.landmark = LandmarkEncoder(input_size=(131, 2), output_size=128, hidden_size=256)
-        self.decoder = LandmarkDecoder(input_dim=128*3, hidden_dim=128*2, output_dim=131*2+11)
+        self.decoder = LandmarkDecoder(input_dim=128*3, hidden_dim=512, output_dim=131*2+11)
         
-        self.audio_emotion_classifier = EmotionClassifier(input_dim=128, output_dim=11)
         self.llfs_emotion_classifier = EmotionClassifier(input_dim=128, output_dim=11)
-        self.lm_emotion_classifier = EmotionClassifier(input_dim=128, output_dim=11)
         
         self.criterion = CustomLoss(alpha=1.0, beta=0.5, gamma=0.5)
         self.kd_loss_fn = nn.KLDivLoss(reduction='batchmean')
@@ -67,10 +65,11 @@ class Model(nn.Module):
         pred_features = self.decoder(audio_features, landmark_features, llfs_features) #(B,1,131,2)
         
         pred_lm = pred_features[:,:,:262]
-        pred_lm = pred_lm.reshape(output.shape[0],output.shape[1],-1,2)
+        pred_lm = pred_lm.reshape(pred_lm.shape[0],pred_lm.shape[1],-1,2)
         pred_lm = pred_lm.squeeze(1)
         
         pred_emo = pred_features[:,:,262:]
+        pred_emo = pred_emo.squeeze(1)
         
         lm_loss = self.loss_fn(pred_lm, gt_lm).to(self.device)
         
@@ -78,15 +77,13 @@ class Model(nn.Module):
         log_landmark_features = torch.softmax(landmark_features, dim=-1)
         kd_loss = self.kd_loss_fn(log_audio_features, log_landmark_features)
         
-        audio_emotion_logits = self.audio_emotion_classifier(audio_features)
-        lm_emotion_logits = self.lm_emotion_classifier(landmark_features)
         llfs_emotion_logits = self.llfs_emotion_classifier(llfs_features)
+        llfs_emotion_logits = llfs_emotion_logits.squeeze(1)
         
-        audio_ce_loss = self.ce_loss(audio_emotion_logits, gt_emo)
-        lm_ce_loss = self.ce_loss(lm_emotion_logits, gt_emo)
+        pred_ce_loss = self.ce_loss(pred_emo, gt_emo)
         llfs_ce_loss = self.ce_loss(llfs_emotion_logits, gt_emo)
 
-        loss = lm_loss + kd_loss + audio_ce_loss + lm_ce_loss + llfs_ce_loss
+        loss = lm_loss + kd_loss + pred_ce_loss + llfs_ce_loss
         
         return (pred_lm), loss
         
@@ -98,6 +95,7 @@ class Model(nn.Module):
         
     def training_step_imp(self, batch, device) -> torch.Tensor:
         audio, llfs, landmark, gt_emo, _ = batch
+        gt_emo = gt_emo.to(device)
         prv_landmark = landmark[:,:-1]
         gt_landmark = landmark[:,-1]
         _, loss = self(
@@ -137,6 +135,7 @@ class Model(nn.Module):
     def inference(self, batch, device, save_folder):
         with torch.no_grad():
             audio, llfs, landmark, gt_emo, lm_paths = batch
+            gt_emo = gt_emo.to(device)
             seg_len = (landmark.shape[1] + 1)//2
             audio_seg = audio[:,:seg_len]
             prv_landmark = landmark[:,:seg_len-1]

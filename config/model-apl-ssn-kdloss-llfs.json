@@ -1,6 +1,6 @@
 {
   "Setup": {
-    "name": "Model_APL_SSN_M003",
+    "name": "Model_APL_SSN_KDLOSS_LLFS",
     "suffix": "CV1",
     "batch_train": 32,
     "batch_test": 32,

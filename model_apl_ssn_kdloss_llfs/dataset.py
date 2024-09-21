@@ -171,8 +171,9 @@ class Dataset(td.Dataset):
             mel_segment = mel_spectrogram_db[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 80)
             
             emo_label = audio_name.split("/")[-2].split("_")[1]
-            emo_level = audio_name.split("/")[-2].split("_")[3]
+            emo_level = int(audio_name.split("/")[-2].split("_")[3])
             emo_tensor = convert_emotion_to_one_hot(emo_label, emo_level)
+            # emo_tensor = emo_tensor.long()
             
             llfs_segment = llfs[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 32)
             break
