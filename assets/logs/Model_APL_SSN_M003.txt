@@ -122,3 +122,5 @@ Eval. results - Epoch: 25; MAE: 15.0180; MSE: 0.3797; Custom: [M-LD: 5.4362;M-LV
 Eval. results - Epoch: 26; MAE: 14.4129; MSE: 0.3528; Custom: [M-LD: 5.2805;M-LV: 3.1748;F-LD: 4.1096;F-LV: 2.5282]
 Eval. results - Epoch: 27; MAE: 14.4187; MSE: 0.3514; Custom: [M-LD: 5.1706;M-LV: 3.1262;F-LD: 4.1666;F-LV: 2.5053]
 Eval. results - Epoch: 28; MAE: 14.1390; MSE: 0.3401; Custom: [M-LD: 5.1696;M-LV: 3.1397;F-LD: 4.0534;F-LV: 2.4710]
+Eval. results - Epoch: 29; MAE: 16.7499; MSE: 0.4749; Custom: [M-LD: 6.1374;M-LV: 4.0476;F-LD: 4.7771;F-LV: 3.1746]
+Eval. results - Epoch: 30; MAE: 15.6559; MSE: 0.4196; Custom: [M-LD: 5.9095;M-LV: 3.7206;F-LD: 4.4006;F-LV: 2.8290]

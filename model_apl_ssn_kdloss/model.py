@@ -76,7 +76,7 @@ class Model(nn.Module):
         kd_loss = self.kd_loss_fn(log_audio_features, log_landmark_features)
         
         audio_emotion_logits = self.audio_emotion_classifier(audio_features)
-        lm_emotion_logits = self.audio_emotion_classifier(landmark_features)
+        lm_emotion_logits = self.lm_emotion_classifier(landmark_features)
         
         audio_ce_loss = self.ce_loss(audio_emotion_logits, gt_emo)
         lm_ce_loss = self.ce_loss(lm_emotion_logits, gt_emo)
