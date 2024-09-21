@@ -180,7 +180,9 @@ class Dataset(td.Dataset):
             
             mel_segment = mel_spectrogram_db[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 80)
             break
-        
+        # with open("./assets/testfile_M003.txt", "a") as f:
+        #     mypath = os.path.join(lm_folder,lm_paths[segment_start_idx + (self.n_frames + 1)//2-1])
+        #     f.write(f"{mypath}\n")
         return (mel_segment, lm_data_list, os.path.join(lm_folder,lm_paths[segment_start_idx + (self.n_frames + 1)//2-1]))
 
     def collate_fn(self, batch):

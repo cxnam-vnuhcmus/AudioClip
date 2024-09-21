@@ -115,7 +115,7 @@ python main.py \
 python main.py \
   --config ./config/model-base.json \
   --data_root /home/cxnam/Documents/MEAD \
-  --data_file ./assets/datas/M030.txt \
+  --data_file ./assets/datas/M003.txt \
   --skip-train-val \
   --pretrained ./assets/checkpoints/checkpoint_MEAD_base_mse_mfcc_checkpoint_20.pt \
   --evaluation \

@@ -21,7 +21,7 @@ from ignite_trainer import _utils
 from ignite_trainer import _interfaces
 
 from utility import plot_landmark_connections, calculate_LMD
-from utility import FACEMESH_ROI_IDX
+from utility import FACEMESH_ROI_IDX, ALL_GROUPS
 
 
 def load_data(data_file, audio_dataroot, lm_dataroot, vs_dataroot, n_frames=5):
@@ -41,6 +41,7 @@ def load_data(data_file, audio_dataroot, lm_dataroot, vs_dataroot, n_frames=5):
     random.shuffle(filelists)
     filelists = filelists[int(len(filelists) * 0.9):] 
     
+    filelists = ["M030\tfront_disgusted_level_3/001"] 
     print("Loading datas ...")
     for fileline in filelists:
         p,line = fileline.strip().split("\t")
@@ -55,7 +56,7 @@ def load_data(data_file, audio_dataroot, lm_dataroot, vs_dataroot, n_frames=5):
         
         with open(audio_name, "r") as f:
             data = json.load(f)
-        mel_spectrogram_db = torch.tensor(data["mel_spectrogram_db"])
+        mel_spectrogram_db = torch.tensor(data["mfcc"])
         
         lm_paths = sorted(os.listdir(lm_folder))
         max_len = min(mel_spectrogram_db.shape[0], len(lm_paths))
@@ -101,7 +102,7 @@ def load_data(data_file, audio_dataroot, lm_dataroot, vs_dataroot, n_frames=5):
         mel_segment = mel_segment.unsqueeze(0)
         
         audio_list = []
-        audio_data, _ = librosa.load(audio_name.replace(".json", ".wav").replace("audio_features", "audios"), sr=16000)
+        audio_data, _ = librosa.load(audio_name.replace(".json", ".wav").replace("audio_features_2", "audios"), sr=16000)
         for i in range(segment_start_idx, segment_start_idx + n_frames):
             start = i * 635
             end = start + 800
@@ -109,6 +110,19 @@ def load_data(data_file, audio_dataroot, lm_dataroot, vs_dataroot, n_frames=5):
             audio_list.append(audio_seg)
         
         return (mel_segment, lm_data_list, vs_path, audio_list)
+
+def save_lm(landmarks, output_file, image_size=256):
+    image_lm = np.zeros((256, 256, 3), dtype=np.uint8)
+    for group in ALL_GROUPS:
+        for (start_idx, end_idx) in group:
+            start_point = landmarks[FACEMESH_ROI_IDX.index(start_idx)]
+            end_point = landmarks[FACEMESH_ROI_IDX.index(end_idx)]
+            start_point = tuple(map(int, start_point))
+            end_point = tuple(map(int, end_point))
+            cv2.line(image_lm, start_point, end_point, (255,255,255), 1)
+    
+    cv2.imwrite(output_file, image_lm)
+
     
 def save_plot(pred_lm, gt_lm, img_paths, raw_audio_seg, audio_seg, output_file, image_size=256):
     background = cv2.imread(img_paths)
@@ -119,7 +133,7 @@ def save_plot(pred_lm, gt_lm, img_paths, raw_audio_seg, audio_seg, output_file, 
     combined_image[:, :image_size, :] = background
     combined_image[:, image_size:image_size*2, :] = background
 
-    fig, axes = plt.subplots(1, 5, figsize=(20, 4))
+    fig, axes = plt.subplots(1, 3, figsize=(20, 4))
 
     # Phần 1: Ảnh background + Ground Truth
     axes[0].imshow(combined_image[:, :image_size, :])
@@ -141,17 +155,17 @@ def save_plot(pred_lm, gt_lm, img_paths, raw_audio_seg, audio_seg, output_file, 
     axes[2].axis('off')
     
     # Phần 4: Biểu đồ từ dữ liệu audio_seg
-    amplitude = np.abs(raw_audio_seg).mean()
-    axes[3].plot(raw_audio_seg)
-    axes[3].set_title(f'Raw audio with amp: {amplitude}')
-    axes[3].set_xlabel('Time')
-    axes[3].set_ylabel('Amplitude')
+    # amplitude = np.abs(raw_audio_seg).mean()
+    # axes[3].plot(raw_audio_seg)
+    # axes[3].set_title(f'Raw audio with amp: {amplitude}')
+    # axes[3].set_xlabel('Time')
+    # axes[3].set_ylabel('Amplitude')
     
-    # Phần 4: Biểu đồ từ dữ liệu audio_seg
-    axes[4].plot(audio_seg)
-    axes[4].set_title('Audio Segment')
-    axes[4].set_xlabel('Mel')
-    axes[4].set_ylabel('Amplitude')
+    # # Phần 4: Biểu đồ từ dữ liệu audio_seg
+    # axes[4].plot(audio_seg)
+    # axes[4].set_title('Audio Segment')
+    # axes[4].set_xlabel('Mel')
+    # axes[4].set_ylabel('Amplitude')
 
     # Lưu ảnh vào file
     plt.savefig(output_file, bbox_inches='tight')
@@ -170,10 +184,11 @@ def inference(model, batch, device, output_file, save_plot_folder):
             pred_lm_list.append(gt_landmark)
             if save_plot_folder is not None:
                 image_size = 256
-                lm_output_file = os.path.join(save_plot_folder, f'landmarks_{i-1}.png')
+                lm_output_file = os.path.join(save_plot_folder, f'{i:05d}.jpg')
                 gt_lm = gt_landmark[0] * image_size
                 pred_lm = gt_landmark[0] * image_size
-                save_plot(pred_lm, gt_lm, lm_paths[i-1], raw_audio[i-1], audio_seg, lm_output_file, image_size)   
+                # save_plot(pred_lm, gt_lm, lm_paths[i-1], raw_audio[i-1], audio_seg, lm_output_file, image_size)   
+                save_lm(gt_lm, lm_output_file, image_size)
                 
         
         for i in tqdm(range(5, audio.shape[1]+1), desc="Landmark Processing"):
@@ -196,10 +211,11 @@ def inference(model, batch, device, output_file, save_plot_folder):
             
             if save_plot_folder is not None:
                 image_size = 256
-                lm_output_file = os.path.join(save_plot_folder, f'landmarks_{i-1}.png')
+                lm_output_file = os.path.join(save_plot_folder, f'{i:05d}.jpg')
                 gt_lm = gt_landmark[0] * image_size
                 pred_lm = pred_landmark[0] * image_size
-                save_plot(pred_lm, gt_lm, lm_paths[i-1], raw_audio[i-1], audio_seg[0,-1], lm_output_file, image_size)
+                # save_plot(pred_lm, gt_lm, lm_paths[i-1], raw_audio[i-1], audio_seg[0,-1], lm_output_file, image_size)
+                save_lm(gt_lm, lm_output_file, image_size)
             
         gt_lm_list = torch.cat(gt_lm_list, dim=0).tolist()
         pred_lm_list = torch.cat(pred_lm_list, dim=0).tolist()

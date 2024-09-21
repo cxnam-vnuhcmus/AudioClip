@@ -143,4 +143,13 @@ python main.py \
   --batch-train 32  \
   --batch-test 32
 
+python main.py \
+  --config config/model-apl-ssn-kdloss.json \
+  --data_root /home/cxnam/Documents/MEAD \
+  --data_file ./assets/datas \
+  --suffix MEAD_apl_ssn_kdloss \
+  --skip-train-val \
+  --n_folders 10 \
+  --pretrained ./assets/checkpoints/checkpoint_MEAD_apl_ssn_kdloss_checkpoint_18.pt
+  
   
