@@ -118,19 +118,9 @@ class Dataset(td.Dataset):
             (audio_name, lm_folder) = self.all_datas[idx]
 
             #audio
-            # audio_data, _ = librosa.load(audio_name, sr=self.sr)
-            # mel_spectrogram = librosa.feature.melspectrogram(y=audio_data, 
-            #                                                 sr=self.sr, 
-            #                                                 n_mels=self.n_mels, 
-            #                                                 n_fft=self.n_fft,
-            #                                                 win_length=self.win_length, 
-            #                                                 hop_length=self.hop_length,
-            #                                                 center=False)
-            # mel_spectrogram_db = librosa.power_to_db(mel_spectrogram, ref=np.max)
-            # mel_spectrogram_db = torch.tensor(mel_spectrogram_db).T #(length, 80)
             with open(audio_name, "r") as f:
                 data = json.load(f)
-            mel_spectrogram_db = torch.tensor(data["mel_spectrogram_db"])
+            mel_spectrogram_db = torch.tensor(data["mfcc"])
             # llfs = torch.tensor(data["llfs"])
             
             #landmark
