@@ -134,10 +134,10 @@ python main.py \
   --batch-test 32
 
 python main.py \
-  --config config/model-speechsyncnet.json \
-  --data_root /home/cxnam/Documents/MEAD \
+  --config config/model-apl-ssn-kdloss-llfs.json \
+  --data_root /data/anhldt/ai/MEAD \
   --data_file ./assets/datas \
-  --suffix MEAD_ssn_mse \
+  --suffix MEAD_apl_ssn_kdloss_llfs \
   --skip-train-val \
   --n_folders 10 \
   --batch-train 32  \
