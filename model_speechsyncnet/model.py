@@ -8,8 +8,8 @@ import os
 from typing import Union
 
 from .audio_encoder import AudioEncoder
-from .landmark_encoder import LandmarkEncoder
-from .landmark_decoder import LandmarkDecoder
+from .landmark_encoder_v1 import LandmarkEncoder
+from .landmark_decoder_v1 import LandmarkDecoder
 from .loss import CustomLoss
 from .utils import plot_landmark_connections, calculate_LMD
 from .utils import FACEMESH_ROI_IDX, FACEMESH_LIPS_IDX, FACEMESH_FACES_IDX
