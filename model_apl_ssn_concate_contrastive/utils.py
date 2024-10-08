@@ -125,13 +125,13 @@ def extract_llf_features(audio_data, sr, n_fft, win_length, hop_length):
 def calculate_LMD(pred_landmark, gt_landmark, norm_distance=1.0):
     euclidean_distance = torch.sqrt(torch.sum((pred_landmark - gt_landmark)**2, dim=(pred_landmark.ndim - 1)))
     norm_per_frame = torch.mean(euclidean_distance, dim=(pred_landmark.ndim - 2))
-    q1 = torch.quantile(norm_per_frame, 0.25)
-    q3 = torch.quantile(norm_per_frame, 0.75)
-    iqr = q3 - q1
-    lower_bound = q1 - 1.5 * iqr
-    upper_bound = q3 + 1.5 * iqr
-    filtered_norm_per_frame = norm_per_frame[(norm_per_frame >= lower_bound) & (norm_per_frame <= upper_bound)]
+    # q1 = torch.quantile(norm_per_frame, 0.25)
+    # q3 = torch.quantile(norm_per_frame, 0.75)
+    # iqr = q3 - q1
+    # lower_bound = q1 - 1.5 * iqr
+    # upper_bound = q3 + 1.5 * iqr
+    # filtered_norm_per_frame = norm_per_frame[(norm_per_frame >= lower_bound) & (norm_per_frame <= upper_bound)]
     
-    lmd = torch.divide(filtered_norm_per_frame, norm_distance)  
+    lmd = torch.divide(norm_per_frame, norm_distance)  
     return lmd.item()
     

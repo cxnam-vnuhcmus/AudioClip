@@ -222,7 +222,18 @@ def run(experiment_name: str,
             filename_prefix=f'checkpoint_{setup_suffix}',
             global_step_transform=lambda e, _: e.state.epoch  # Sử dụng số epoch làm global step
         )
+        best_handler = Checkpoint(
+            {'model': model, 'optimizer': optimizer, 'trainer': trainer},
+            DiskSaver(f'{saved_models_path}/checkpoints', create_dir=True, require_empty=False),
+            n_saved=1,  # Số lượng checkpoint cần lưu
+            filename_prefix=f'best_{setup_suffix}',
+            global_step_transform=lambda e, _: e.state.epoch,  # Sử dụng số epoch làm global step
+            score_function=lambda engine: -engine.state.metrics['MSE'],
+            score_name="MSE"
+        )
         trainer.add_event_handler(ieng.Events.EPOCH_COMPLETED, handler)
+        validator_eval.add_event_handler(ieng.Events.COMPLETED, best_handler)
+
         
         #Load checkpoints
         if isinstance(model_args['pretrained'], str):

@@ -130,7 +130,7 @@ class Dataset(td.Dataset):
             # mel_spectrogram_db = torch.tensor(mel_spectrogram_db).T #(length, 80)
             with open(audio_name, "r") as f:
                 data = json.load(f)
-            mel_spectrogram_db = torch.tensor(data["mel_spectrogram_db"])
+            mel_spectrogram_db = torch.tensor(data["mfcc"])
             # llfs = torch.tensor(data["llfs"])
             
             #landmark

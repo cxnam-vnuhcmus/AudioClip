@@ -41,7 +41,8 @@ def load_data(data_file, audio_dataroot, lm_dataroot, vs_dataroot, n_frames=5):
     random.shuffle(filelists)
     filelists = filelists[int(len(filelists) * 0.9):] 
     
-    filelists = ["M030\tfront_disgusted_level_3/001"] 
+    filelists = ["M003\tfront_happy_level_1/001"] 
+    # filelists = ["M030\tfront_disgusted_level_3/001"] 
     print("Loading datas ...")
     for fileline in filelists:
         p,line = fileline.strip().split("\t")
@@ -133,7 +134,7 @@ def save_plot(pred_lm, gt_lm, img_paths, raw_audio_seg, audio_seg, output_file, 
     combined_image[:, :image_size, :] = background
     combined_image[:, image_size:image_size*2, :] = background
 
-    fig, axes = plt.subplots(1, 3, figsize=(20, 4))
+    fig, axes = plt.subplots(1, 5, figsize=(20, 4))
 
     # Phần 1: Ảnh background + Ground Truth
     axes[0].imshow(combined_image[:, :image_size, :])
@@ -155,17 +156,17 @@ def save_plot(pred_lm, gt_lm, img_paths, raw_audio_seg, audio_seg, output_file, 
     axes[2].axis('off')
     
     # Phần 4: Biểu đồ từ dữ liệu audio_seg
-    # amplitude = np.abs(raw_audio_seg).mean()
-    # axes[3].plot(raw_audio_seg)
-    # axes[3].set_title(f'Raw audio with amp: {amplitude}')
-    # axes[3].set_xlabel('Time')
-    # axes[3].set_ylabel('Amplitude')
+    amplitude = np.abs(raw_audio_seg).mean()
+    axes[3].plot(raw_audio_seg)
+    axes[3].set_title(f'Raw audio with amp: {amplitude}')
+    axes[3].set_xlabel('Time')
+    axes[3].set_ylabel('Amplitude')
     
-    # # Phần 4: Biểu đồ từ dữ liệu audio_seg
-    # axes[4].plot(audio_seg)
-    # axes[4].set_title('Audio Segment')
-    # axes[4].set_xlabel('Mel')
-    # axes[4].set_ylabel('Amplitude')
+    # Phần 4: Biểu đồ từ dữ liệu audio_seg
+    axes[4].plot(audio_seg)
+    axes[4].set_title('Audio Segment')
+    axes[4].set_xlabel('Mel')
+    axes[4].set_ylabel('Amplitude')
 
     # Lưu ảnh vào file
     plt.savefig(output_file, bbox_inches='tight')
@@ -178,7 +179,7 @@ def inference(model, batch, device, output_file, save_plot_folder):
         gt_lm_list = []
         pred_lm_list = []
         for i in range(1, 5):
-            audio_seg = audio[0,i-1]     
+            audio_seg = audio[:,i-1]     
             gt_landmark = landmark[:,i-1]                        
             gt_lm_list.append(gt_landmark)
             pred_lm_list.append(gt_landmark)
@@ -187,8 +188,8 @@ def inference(model, batch, device, output_file, save_plot_folder):
                 lm_output_file = os.path.join(save_plot_folder, f'{i:05d}.jpg')
                 gt_lm = gt_landmark[0] * image_size
                 pred_lm = gt_landmark[0] * image_size
-                # save_plot(pred_lm, gt_lm, lm_paths[i-1], raw_audio[i-1], audio_seg, lm_output_file, image_size)   
-                save_lm(gt_lm, lm_output_file, image_size)
+                save_plot(pred_lm, gt_lm, lm_paths[i-1], raw_audio[i-1], audio_seg, lm_output_file, image_size)   
+                # save_lm(gt_lm, lm_output_file, image_size)
                 
         
         for i in tqdm(range(5, audio.shape[1]+1), desc="Landmark Processing"):
@@ -214,8 +215,8 @@ def inference(model, batch, device, output_file, save_plot_folder):
                 lm_output_file = os.path.join(save_plot_folder, f'{i:05d}.jpg')
                 gt_lm = gt_landmark[0] * image_size
                 pred_lm = pred_landmark[0] * image_size
-                # save_plot(pred_lm, gt_lm, lm_paths[i-1], raw_audio[i-1], audio_seg[0,-1], lm_output_file, image_size)
-                save_lm(gt_lm, lm_output_file, image_size)
+                save_plot(pred_lm, gt_lm, lm_paths[i-1], raw_audio[i-1], audio_seg[0,-1], lm_output_file, image_size)
+                # save_lm(gt_lm, lm_output_file, image_size)
             
         gt_lm_list = torch.cat(gt_lm_list, dim=0).tolist()
         pred_lm_list = torch.cat(pred_lm_list, dim=0).tolist()

@@ -176,11 +176,11 @@ class Dataset(td.Dataset):
                 
                 # combined = torch.cat((img_feature, image_lm), dim=1)
                 
-                return (image_lm, gt_img_feature)
+                return (image_lm, gt_img_feature, os.path.join(vs_folder,lm_paths[i]))
         return None
 
     def collate_fn(self, batch):
-        batch_landmark, batch_gt_img_feature = zip(*batch)
+        batch_landmark, batch_gt_img_feature, batch_lm_path = zip(*batch)
         keep_ids = [idx for idx, (_, _) in enumerate(zip(batch_landmark, batch_gt_img_feature))]
             
         if not all(img is None for img in batch_landmark):
@@ -195,4 +195,9 @@ class Dataset(td.Dataset):
         else:
             batch_gt_img_feature = None
             
-        return batch_landmark, batch_gt_img_feature
+        if not all(img is None for img in batch_lm_path):
+            batch_lm_path = [batch_lm_path[idx] for idx in keep_ids]
+        else:
+            batch_lm_path = None
+            
+        return batch_landmark, batch_gt_img_feature, batch_lm_path

@@ -1,18 +1,19 @@
 python inference/audio2landmark.py \
-  --config config/model-base.json \
+  --config config/model-apl.json \
   --data_root /home/cxnam/Documents/MEAD \
   --data_file ./assets/datas/M003.txt \
   --output_file ./inference/samples/lm_data.json \
-  --pretrained ./assets/checkpoints/checkpoint_MEAD_base_mse_mfcc_checkpoint_20.pt \
+  --pretrained ./assets/checkpoints/checkpoint_M003_apl_mse_mfcc_checkpoint_19.pt \
   --n_frames -1 \
   --save_plot ./inference/samples/a2lm \
 
 python inference/landmark2face.py \
-  --config config/model-lm-vae-2.json \
+  --config /home/cxnam/Documents/MyWorkingSpace/LM2F_VAE/config/model-lm-vae-gan.json \
   --data_root /home/cxnam/Documents/MEAD/M003 \
   --data_file ./inference/samples/lm_data.json \
   --log_samples ./inference/samples/lm2face \
-  --pretrained ./assets/checkpoints/checkpoint_M003_lm_vae_checkpoint_93.pt \
+  --pretrained /home/cxnam/Documents/MyWorkingSpace/LM2F_VAE/assets/checkpoints/best_M003_lm_vae_v3_checkpoint_1_MSE=-0.0040.pt \
+
 
 python inference/face2video.py \
   --log_samples ./inference/samples/lm2face \

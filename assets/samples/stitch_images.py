@@ -76,15 +76,20 @@ def stitch_images(paths, orientation='horizontal', max_width=None, max_height=No
 
     return new_img
 
-root = '/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/samples/MEAD/samples_base_mse'
-file_paths = sorted(os.listdir(root))
+root = '/home/cxnam/Documents/MyWorkingSpace/Trainer/inference/samples/a2lm'
+file_paths = sorted([file for file in os.listdir(root) if file.startswith("")])
+# root = '/home/cxnam/Documents/MEAD/M003/images/front_happy_level_1/001'
+# file_paths = sorted([file for file in os.listdir(root) if file.startswith("")])
+# root = '/home/cxnam/Documents/MyWorkingSpace/Trainer/inference/samples/lm2face'
+# file_paths = sorted([file for file in os.listdir(root) if file.startswith("pred_")])
+
 paths = []
-for i in range(10):
+for i in range(15):
     path = os.path.join(root, file_paths[i])
     paths.append(path)
 
 # Create a horizontal stitch with scaling
-stitched_image = stitch_images(paths, orientation='vertical', max_width=256*3, max_height=256*3)
+stitched_image = stitch_images(paths, orientation='horizontal', max_width=256*3, max_height=256*3)
 
 # Save the stitched image
-stitched_image.save('/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/samples/MEAD_image_base_mse.jpg')
+stitched_image.save('/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/samples/M003_happy_1_001_vae_lm_1.jpg')

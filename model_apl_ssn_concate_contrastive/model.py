@@ -32,12 +32,13 @@ class Model(nn.Module):
         self.audio_dim = audio_dim
         self.lm_dim = lm_dim
         
-        self.audio = AudioEncoder(dim_in=self.audio_dim)
+        self.audio = AudioEncoder(dim_in=40)
         self.landmark = LandmarkEncoder(input_size=(131, 2), output_size=128, hidden_size=256)
         self.decoder = LandmarkDecoder(output_dim=self.lm_dim)
         
         self.criterion = CustomLoss(alpha=1.0, beta=0.5, gamma=0.5)
-        self.constrative = ContrastiveModel(input_dim=128, hidden_dim=64, output_dim=128)
+        # self.constrative = ContrastiveModel(input_dim=128, hidden_dim=64, output_dim=128)
+        self.kd_loss_fn = nn.KLDivLoss(reduction='batchmean')
 
     
     @property
@@ -63,8 +64,12 @@ class Model(nn.Module):
         pred_lm = self.decoder(audio_features, landmark_features) #(B,1,131,2)
         pred_lm = pred_lm.squeeze(1)
         lm_loss = self.loss_fn(pred_lm, gt_lm)
-        contrastive_loss = self.constrative(audio_features, landmark_features)
-        loss = lm_loss + contrastive_loss
+        # contrastive_loss = self.constrative(audio_features, landmark_features)
+        log_audio_features = torch.log_softmax(audio_features, dim=-1)
+        log_landmark_features = torch.softmax(landmark_features, dim=-1)
+        kd_loss = self.kd_loss_fn(log_audio_features, log_landmark_features)
+        
+        loss = lm_loss + kd_loss
         
         return (pred_lm), loss
         

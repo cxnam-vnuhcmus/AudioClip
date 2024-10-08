@@ -2,8 +2,8 @@
   "Setup": {
     "name": "Model_APL_SSN_M003",
     "suffix": "CV1",
-    "batch_train": 32,
-    "batch_test": 32,
+    "batch_train": 128,
+    "batch_test": 128,
     "workers_train": 10,
     "workers_test": 10,
     "epochs": 200,
@@ -30,7 +30,7 @@
     }
   },
   "Dataset": {
-    "class": "model_apl_ssn_kdloss.dataset.Dataset",
+    "class": "model_apl_ssn_kdloss.dataset_v0.Dataset",
     "args": {
       "audio_dataroot": "{p}/audio_features_2",
       "visual_dataroot": "{p}/images",
@@ -89,14 +89,6 @@
     }
   ],
   "Metrics": [
-      
-      {
-          "label": "MAE",
-          "class": "ignite.metrics.MeanAbsoluteError",
-          "args": {"output_transform": ["y_pred", "y"]},
-          "use_for": ["val","test"],
-          "save_checkpoint": true
-      },
       {
         "label": "MSE",
         "class": "ignite.metrics.MeanSquaredError",

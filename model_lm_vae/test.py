@@ -5,16 +5,17 @@ import torchvision.transforms as T
 from tqdm import tqdm
 
 # Load the data from the JSON file
-with open('./img_feature_data.json', 'r') as json_file:
+with open('/home/cxnam/Documents/MyWorkingSpace/Trainer/assets/samples/M003/samples_lm_vae/tensor_data.json', 'r') as json_file:
     data = json.load(json_file)
 
 # Convert lists back to tensors
 gt_img_feature = torch.tensor(data["gt_img_feature"])
 img_feature = torch.tensor(data["pred_img_feature"])
+lm_paths = data["lm_paths"]
 
 # Print shapes to verify
 print("gt_img_feature shape:", gt_img_feature.shape)
-print("img_feature shape:", img_feature.shape)
+print("pred_img_feature shape:", img_feature.shape)
 
 from diffusers import AutoencoderKL
 vae = AutoencoderKL.from_pretrained(f"stabilityai/sd-vae-ft-ema")
@@ -43,6 +44,11 @@ with torch.no_grad():
         samples = vae.decode(pf)
         output = samples.sample[0]
         inv_image = inv_normalize(output)
-        inv_image.save(f'./assets/samples/M003/samples_lm_vae/image_{i:05d}.jpg')
+        inv_image.save(f'./assets/samples/M003/samples_lm_vae/pred_{i:05d}.jpg')
+        
+        gt_img_path = lm_paths[i].replace("image_features", "images").replace("json", "jpg")
+        gt_image = Image.open(gt_img_path)
+        gt_image.save(f'./assets/samples/M003/samples_lm_vae/gt_{i:05d}.jpg')
+
         
         # break

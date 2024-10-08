@@ -100,7 +100,19 @@ class Dataset(td.Dataset):
             audio_name = os.path.join(audio_p, f'{line}.json')
             lm_folder = os.path.join(lm_p, line)
             
-            all_datas.append((audio_name, lm_folder))
+            #segment
+            lm_paths = sorted(os.listdir(lm_folder))
+            for i in range(0, len(lm_paths) - self.n_frames, self.n_frames):
+                is_segment = True
+                for j in range(self.n_frames):
+                    if (i + j) < len(lm_paths):
+                        if not os.path.exists(os.path.join(lm_folder,lm_paths[i + j])):
+                            is_segment = False
+                            continue
+                if is_segment:
+                    all_datas.append((audio_name, lm_folder, i))
+            
+            # all_datas.append((audio_name, lm_folder))
                 
         return all_datas
         
@@ -114,65 +126,35 @@ class Dataset(td.Dataset):
         # return 32
 
     def __getitem__(self, idx):        
-        while True:
-            (audio_name, lm_folder) = self.all_datas[idx]
+        (audio_name, lm_folder, segment_start_idx) = self.all_datas[idx]
 
-            #audio
-            with open(audio_name, "r") as f:
-                data = json.load(f)
-            mel_spectrogram_db = torch.tensor(data["mfcc"])
-            # llfs = torch.tensor(data["llfs"])
-            
-            #landmark
-            lm_paths = sorted(os.listdir(lm_folder))
-            
-            #random segment
-            max_len = min(mel_spectrogram_db.shape[0], len(lm_paths))
-            if max_len < self.n_frames:
-                idx = random.randint(0, len(self.all_datas))
-                continue
-                
-            if self.train:
-                random.seed(None)
-                segment_start_idx = -1
-                while(segment_start_idx == -1):
-                    segment_start_idx = random.randint(0, max_len - self.n_frames)
-                    for i in range(segment_start_idx, segment_start_idx + self.n_frames):
-                        if not os.path.exists(os.path.join(lm_folder,lm_paths[i])):
-                            segment_start_idx = -1
-                            break
-            else:
-                random.seed(0)
-                idx = list(range(max_len - self.n_frames))
-                random.shuffle(idx)
-                for segment_start_idx in idx:
-                    idx_found = True
-                    for i in range(segment_start_idx, segment_start_idx + self.n_frames):
-                        if not os.path.exists(os.path.join(lm_folder,lm_paths[i])) or not os.path.exists(os.path.join(lm_folder,lm_paths[i]).replace(".json", ".jpg").replace("face_meshes", "images")):
-                            idx_found = False
-                            break
-                    if idx_found:
-                        break
-            
-            lm_data_list = []
-            for i in range(segment_start_idx, segment_start_idx + self.n_frames):
-                with open(os.path.join(lm_folder,lm_paths[i]), "r") as f:
-                    lm_data = json.load(f)
-                    lm_roi = []
-                    for i in FACEMESH_ROI_IDX:
-                        lm_roi.append(lm_data[i])
-                    lm_roi = np.asarray(lm_roi)
-                    lm_roi = torch.FloatTensor(lm_roi)
-                    lm_roi = lm_roi / 256.0
-                    lm_data_list.append(lm_roi)
-            lm_data_list = np.stack(lm_data_list, axis=0)
-            lm_data_list = torch.tensor(lm_data_list) #(N, lm_points, 2)
-            
-            mel_segment = mel_spectrogram_db[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 80)
-            
-            emo_label = audio_name.split("/")[-2].split("_")[1]
-            emo_tensor = convert_emotion_to_one_hot(emo_label)
-            break
+        #audio
+        with open(audio_name, "r") as f:
+            data = json.load(f)
+        mel_spectrogram_db = torch.tensor(data["mfcc"])
+        # llfs = torch.tensor(data["llfs"])
+        
+        #landmark
+        lm_paths = sorted(os.listdir(lm_folder))
+        
+        lm_data_list = []
+        for i in range(segment_start_idx, segment_start_idx + self.n_frames):
+            with open(os.path.join(lm_folder,lm_paths[i]), "r") as f:
+                lm_data = json.load(f)
+                lm_roi = []
+                for i in FACEMESH_ROI_IDX:
+                    lm_roi.append(lm_data[i])
+                lm_roi = np.asarray(lm_roi)
+                lm_roi = torch.FloatTensor(lm_roi)
+                lm_roi = lm_roi / 256.0
+                lm_data_list.append(lm_roi)
+        lm_data_list = np.stack(lm_data_list, axis=0)
+        lm_data_list = torch.tensor(lm_data_list) #(N, lm_points, 2)
+        
+        mel_segment = mel_spectrogram_db[segment_start_idx:segment_start_idx + self.n_frames, :] #(N, 80)
+        
+        emo_label = audio_name.split("/")[-2].split("_")[1]
+        emo_tensor = convert_emotion_to_one_hot(emo_label)
         
         return (mel_segment, lm_data_list, emo_tensor, os.path.join(lm_folder,lm_paths[segment_start_idx + (self.n_frames + 1)//2-1]))
 

@@ -1,12 +1,12 @@
 {
   "Setup": {
-    "name": "Model_APL_SSN_M003",
+    "name": "Model_Fullmesh",
     "suffix": "CV1",
     "batch_train": 32,
     "batch_test": 32,
     "workers_train": 10,
     "workers_test": 10,
-    "epochs": 20,
+    "epochs": 50,
     "log_interval": 50,
     "saved_models_path": "./assets"
   },
@@ -32,7 +32,7 @@
   "Dataset": {
     "class": "model_fullmesh.dataset.Dataset",
     "args": {
-      "audio_dataroot": "{p}/audios",
+      "audio_dataroot": "{p}/audio_features_2",
       "visual_dataroot": "{p}/images",
       "lm_dataroot": "{p}/face_meshes",
       "transcript_dataroot": "{p}/transcripts",

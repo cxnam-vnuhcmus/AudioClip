@@ -62,7 +62,7 @@ class Model(nn.Module):
 
         
     def training_step_imp(self, batch, device) -> torch.Tensor:
-        landmark, gt_img_feature = batch
+        landmark, gt_img_feature, _ = batch
         _, loss = self(
             landmark = landmark,
             gt_img_feature = gt_img_feature
@@ -72,7 +72,7 @@ class Model(nn.Module):
 
     def eval_step_imp(self, batch, device):
         with torch.no_grad():
-            landmark, gt_img_feature = batch
+            landmark, gt_img_feature, _ = batch
             gt_img_feature = gt_img_feature.to(device)
             
             (img_feature), _ = self(
@@ -85,7 +85,7 @@ class Model(nn.Module):
         
     def inference(self, batch, device, save_folder):
         with torch.no_grad():
-            landmark, gt_img_feature = batch
+            landmark, gt_img_feature, lm_paths = batch
             
             (img_feature), _ = self(
                 landmark = landmark,
@@ -96,11 +96,11 @@ class Model(nn.Module):
             img_feature_list = img_feature.tolist()
             data = {
                 "gt_img_feature": gt_img_feature_list,
-                "img_feature": img_feature_list
+                "pred_img_feature": img_feature_list,
+                "lm_paths": lm_paths
             }
             with open('./assets/samples/M003/samples_lm_vae/tensor_data.json', 'w') as json_file:
                 json.dump(data, json_file)
-            
             
             gt_img_feature = gt_img_feature.permute(0, 2, 3, 1)
             img_feature = img_feature.permute(0, 2, 3, 1).detach().cpu()

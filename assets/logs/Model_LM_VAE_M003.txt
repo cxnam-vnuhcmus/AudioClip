@@ -6,3 +6,6 @@ Eval results - model_lm_vae.model.Model; ./assets/datas/M003.txt; MSE: 48058.163
 Eval results - model_lm_vae.model.Model; ./assets/datas/M003.txt; MSE: 107599.1719
 Eval results - model_lm_vae.model.Model; ./assets/datas/M003.txt; MSE: 1178.4096
 Eval results - model_lm_vae.model.Model; ./assets/datas/M003.txt; MSE: 776.2181
+Eval results - model_lm_vae.model.Model; ./assets/datas/M003.txt; MSE: 776.2181
+Eval results - model_lm_vae.model.Model; ./assets/datas/M003.txt; MSE: 776.2181
+Eval results - model_lm_vae.model.Model; ./assets/datas/M003.txt; MSE: 776.2181

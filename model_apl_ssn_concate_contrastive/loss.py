@@ -33,8 +33,8 @@ class CustomMetric(Metric):
         y_faces = y[:, :, mapped_faces_indices, :]
         fld_score = self.calculate_LMD(y_pred_faces, y_faces)
         flv_score = self.calculate_LMV(y_pred_faces, y_faces)
-        fld_score = self.exclude_outliers(fld_score, self._sum_fld, self._num_examples )
-        flv_score = self.exclude_outliers(flv_score, self._sum_flv, self._num_examples )
+        # fld_score = self.exclude_outliers(fld_score, self._sum_fld, self._num_examples )
+        # flv_score = self.exclude_outliers(flv_score, self._sum_flv, self._num_examples )
         self._sum_fld += fld_score.sum()
         self._sum_flv += flv_score.sum()
             
@@ -42,8 +42,8 @@ class CustomMetric(Metric):
         y_lips = y[:, :, mapped_lips_indices, :]
         mld_score = self.calculate_LMD(y_pred_lips, y_lips)
         mlv_score = self.calculate_LMV(y_pred_lips, y_lips)
-        mld_score = self.exclude_outliers(mld_score, self._sum_mld, self._num_examples )
-        mlv_score = self.exclude_outliers(mlv_score, self._sum_mlv, self._num_examples )
+        # mld_score = self.exclude_outliers(mld_score, self._sum_mld, self._num_examples )
+        # mlv_score = self.exclude_outliers(mlv_score, self._sum_mlv, self._num_examples )
         
         self._sum_mld += mld_score.sum()
         self._sum_mlv += mlv_score.sum()
@@ -134,15 +134,16 @@ class CustomLoss(nn.Module):
         target = target.cpu()
         
         # MAE Loss
-        mae_loss = nn.L1Loss()(pred, target) #MAE Loss: Đo khoảng cách trung bình tuyệt đối giữa các điểm, giúp cải thiện độ chính xác của các tọa độ điểm.
+        #mae_loss = nn.L1Loss()(pred, target) #MAE Loss: Đo khoảng cách trung bình tuyệt đối giữa các điểm, giúp cải thiện độ chính xác của các tọa độ điểm.
+        mse_loss = nn.MSELoss()(pred, target)
         
-        # Chamfer Distance Loss
-        chamfer_loss = chamfer_distance(pred, target) #Chamfer Distance: Đo sự tương đồng giữa hai tập hợp điểm bằng cách tính khoảng cách giữa các điểm gần nhất, có thể giúp cải thiện cấu trúc của các điểm landmark.
+        # # Chamfer Distance Loss
+        # chamfer_loss = chamfer_distance(pred, target) #Chamfer Distance: Đo sự tương đồng giữa hai tập hợp điểm bằng cách tính khoảng cách giữa các điểm gần nhất, có thể giúp cải thiện cấu trúc của các điểm landmark.
         
-        # Earth Mover's Distance Loss
-        emd_loss = earth_mover_distance(pred, target) #EMD: Đo sự khác biệt giữa các phân phối điểm, giúp cải thiện khả năng phân phối của các điểm landmark.
+        # # Earth Mover's Distance Loss
+        # emd_loss = earth_mover_distance(pred, target) #EMD: Đo sự khác biệt giữa các phân phối điểm, giúp cải thiện khả năng phân phối của các điểm landmark.
         
-        # Tổng hợp các mất mát với trọng số
-        total_loss = self.alpha * mae_loss + self.beta * chamfer_loss + self.gamma * emd_loss
-        return total_loss
+        # # Tổng hợp các mất mát với trọng số
+        # total_loss = self.alpha * mae_loss + self.beta * chamfer_loss + self.gamma * emd_loss
+        return mse_loss
 

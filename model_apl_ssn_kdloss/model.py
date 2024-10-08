@@ -8,7 +8,7 @@ import os
 from typing import Union
 
 from .audio_encoder import AudioEncoder
-from .landmark_encoder import LandmarkEncoder
+from .landmark_encoder_v1 import LandmarkEncoder
 from .landmark_decoder import LandmarkDecoder
 from .emotion_classifier import EmotionClassifier
 from .utils import plot_landmark_connections, calculate_LMD
